@@ -145,12 +145,13 @@ Benchmark results (PHP 7.4.33, 1,000,000 iterations, 5 runs):
 
 | Case | Avg elapsed (ms) |
 | --- | --- |
-| No extension (disabled) | 207 |
-| Extension loaded: Off | 208 |
-| Extension loaded: Report | 1027 |
-| Extension loaded: Error | 525 |
-| Opcode overhead (no report) | 216 |
-| Deprecated cost (with report) | 784 |
+| No extension (disabled) | 63 |
+| Extension loaded: Off | 58 |
+| Extension loaded: Report | 648 |
+| Extension loaded: Report (sampling=5) | 227 |
+| Extension loaded: Error | 353 |
+| Opcode overhead (no report) | 90 |
+| Deprecated cost (with report) | 574 |
 
 ## Debugging with gdb
 
