@@ -41,6 +41,10 @@ Allowed values (set at startup only):
 - `simulate_and_report` - emit deprecation warnings and return PHP 8.0 results
 - `simulate` - return PHP 8.0 results without reporting
 
+Note: `error`, `simulate`, and `simulate_and_report` are only available when the extension
+is built with `--enable-php74-php8-comparison-shim-risky`. Without that flag, those modes
+are treated as `off`.
+
 Note: `php74_php8_comparison_shim.mode` is `PHP_INI_SYSTEM` and cannot be changed at runtime
 via `ini_set()`.
 
@@ -60,6 +64,24 @@ Sampling is forced to `0` in `error`, `simulate_and_report`, and `simulate` mode
 ```
 phpize
 ./configure --enable-php74-php8-comparison-shim
+make -j$(nproc)
+make install
+```
+
+Debug symbols are disabled by default. To build with debug symbols, pass `CFLAGS`:
+
+```
+phpize
+CFLAGS="-g -O0" ./configure --enable-php74-php8-comparison-shim
+make -j$(nproc)
+make install
+```
+
+To enable simulate modes, pass the risky flag at build time:
+
+```
+phpize
+./configure --enable-php74-php8-comparison-shim --enable-php74-php8-comparison-shim-risky
 make -j$(nproc)
 make install
 ```
@@ -176,15 +198,15 @@ Benchmark results (PHP 7.4.33, 1,000,000 iterations, 5 runs):
 
 | Case | Avg elapsed (ms) |
 | --- | --- |
-| No extension (disabled) | 63 |
-| Extension loaded: Off | 57 |
-| Extension loaded: Report | 609 |
-| Extension loaded: Report (sampling=5) | 198 |
-| Extension loaded: Simulate | 165 |
-| Extension loaded: Simulate + Report | 626 |
-| Extension loaded: Error | 341 |
-| Opcode overhead (no report) | 68 |
-| Deprecated cost (with report) | 548 |
+| No extension (disabled) | 66 |
+| Extension loaded: Off | 64 |
+| Extension loaded: Report | 608 |
+| Extension loaded: Report (sampling=5) | 197 |
+| Extension loaded: Simulate | 171 |
+| Extension loaded: Simulate + Report | 623 |
+| Extension loaded: Error | 339 |
+| Opcode overhead (no report) | 67 |
+| Deprecated cost (with report) | 538 |
 
 ## Debugging with gdb
 

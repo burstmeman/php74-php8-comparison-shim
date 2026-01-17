@@ -136,22 +136,34 @@ static void p748_cmps_set_mode_from_string(const zend_string *value)
 
 	if (zend_string_equals_literal_ci(value, "error")
 		|| zend_string_equals_literal_ci(value, "2")) {
+#if PHP74_PHP8_COMPARISON_SHIM_RISKY
 		PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_ERROR;
 		p748_cmps_disable_sampling();
+#else
+		PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_OFF;
+#endif
 		return;
 	}
 
 	if (zend_string_equals_literal_ci(value, "simulate_and_report")
 		|| zend_string_equals_literal_ci(value, "3")) {
+#if PHP74_PHP8_COMPARISON_SHIM_RISKY
 		PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_SIMULATE_AND_REPORT;
 		p748_cmps_disable_sampling();
+#else
+		PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_OFF;
+#endif
 		return;
 	}
 
 	if (zend_string_equals_literal_ci(value, "simulate")
 		|| zend_string_equals_literal_ci(value, "4")) {
+#if PHP74_PHP8_COMPARISON_SHIM_RISKY
 		PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_SIMULATE;
 		p748_cmps_disable_sampling();
+#else
+		PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_OFF;
+#endif
 		return;
 	}
 
@@ -199,20 +211,32 @@ static void p748_cmps_set_mode_from_cstr(const char *value)
 	}
 
 	if (strcasecmp(value, "error") == 0 || strcmp(value, "2") == 0) {
+#if PHP74_PHP8_COMPARISON_SHIM_RISKY
 		PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_ERROR;
 		p748_cmps_disable_sampling();
+#else
+		PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_OFF;
+#endif
 		return;
 	}
 
 	if (strcasecmp(value, "simulate_and_report") == 0 || strcmp(value, "3") == 0) {
+#if PHP74_PHP8_COMPARISON_SHIM_RISKY
 		PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_SIMULATE_AND_REPORT;
 		p748_cmps_disable_sampling();
+#else
+		PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_OFF;
+#endif
 		return;
 	}
 
 	if (strcasecmp(value, "simulate") == 0 || strcmp(value, "4") == 0) {
+#if PHP74_PHP8_COMPARISON_SHIM_RISKY
 		PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_SIMULATE;
 		p748_cmps_disable_sampling();
+#else
+		PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_OFF;
+#endif
 		return;
 	}
 
@@ -524,6 +548,11 @@ static PHP_MINFO_FUNCTION(php74_php8_comparison_shim)
 	php_info_print_table_header(2, "php74_php8_comparison_shim support", "enabled");
 	php_info_print_table_row(2, "Mode", p748_cmps_mode_to_string(PHP74_PHP8_CS_G(mode)));
 	php_info_print_table_row(2, "Sampling factor", INI_STR("php74_php8_comparison_shim.sampling_factor"));
+#if PHP74_PHP8_COMPARISON_SHIM_RISKY
+	php_info_print_table_row(2, "Risky modes", "enabled");
+#else
+	php_info_print_table_row(2, "Risky modes", "disabled");
+#endif
 	php_info_print_table_end();
 
 	DISPLAY_INI_ENTRIES();
