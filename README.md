@@ -46,6 +46,27 @@ Sampling factor:
 - `0` or `1` - check every comparison (no sampling)
 - `N` (> 1) - check once per `N` number/string comparisons
 
+## Install
+
+1. Download the latest release archive from
+   [GitHub Releases](https://github.com/burstmeman/php74-php8-comparison-shim/releases).
+2. Extract the archive and enter the directory.
+3. Build and install:
+
+```
+phpize
+./configure --enable-php74-php8-comparison-shim
+make -j$(nproc)
+make install
+```
+
+4. Enable the extension in `php.ini`:
+
+```
+extension=php74_php8_comparison_shim.so
+php74_php8_comparison_shim.mode=report
+```
+
 ## Build (PHP 7.4.33)
 
 Prerequisites:
@@ -57,7 +78,7 @@ From the extension directory:
 
 ```
 phpize
-CFLAGS="-g -O0" ./configure --enable-php74-php8-comparison-shim
+./configure --enable-php74-php8-comparison-shim
 make -j$(nproc)
 ```
 
@@ -67,7 +88,13 @@ Install the module to your PHP extension dir:
 make install
 ```
 
-The build uses debug symbols via `-g -O0` (see `config.m4`), so you can debug with gdb.
+Optional debug build:
+
+```
+CFLAGS="-g -O0" ./configure --enable-php74-php8-comparison-shim
+```
+
+Use this when you want debug symbols and no optimizations for easier gdb debugging.
 
 ## Use with PHP
 
