@@ -8,6 +8,7 @@ if (!extension_loaded("php74_php8_comparison_shim")) {
 ?>
 --INI--
 php74_php8_comparison_shim.mode=error
+php74_php8_comparison_shim.sampling_factor=2
 display_errors=1
 log_errors=0
 error_reporting=E_ALL

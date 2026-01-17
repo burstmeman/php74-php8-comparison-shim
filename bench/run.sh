@@ -63,6 +63,24 @@ run_case "Extension loaded: Report (sampling=5)" \
   -d php74_php8_comparison_shim.sampling_factor=5 \
   "${ROOT_DIR}/bench/compare.php"
 
+# Simulate mode: returns PHP 8.0 results without reporting.
+run_case "Extension loaded: Simulate" \
+  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=simulate \
+  "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=0 \
+  -d extension_dir="${ROOT_DIR}/modules" \
+  -d extension=php74_php8_comparison_shim.so \
+  -d php74_php8_comparison_shim.mode=simulate \
+  "${ROOT_DIR}/bench/compare.php"
+
+# Simulate and report: returns PHP 8.0 results with deprecations.
+run_case "Extension loaded: Simulate + Report" \
+  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=simulate_and_report \
+  "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=0 \
+  -d extension_dir="${ROOT_DIR}/modules" \
+  -d extension=php74_php8_comparison_shim.so \
+  -d php74_php8_comparison_shim.mode=simulate_and_report \
+  "${ROOT_DIR}/bench/compare.php"
+
 # Error mode with try/catch. Expect high overhead from throw/catch path.
 run_case "Extension loaded: Error" \
   env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=error SNC_VALIDATE=1 \

@@ -38,6 +38,8 @@ Allowed values (set at startup only):
 - `off`    - extension logic disabled
 - `report` - emit deprecation warnings
 - `error`  - throw an Error
+- `simulate_and_report` - emit deprecation warnings and return PHP 8.0 results
+- `simulate` - return PHP 8.0 results without reporting
 
 Note: `php74_php8_comparison_shim.mode` is `PHP_INI_SYSTEM` and cannot be changed at runtime
 via `ini_set()`.
@@ -45,6 +47,8 @@ via `ini_set()`.
 Sampling factor:
 - `0` or `1` - check every comparison (no sampling)
 - `N` (> 1) - check once per `N` number/string comparisons
+
+Sampling is forced to `0` in `error`, `simulate_and_report`, and `simulate` modes.
 
 ## Install
 
@@ -173,12 +177,14 @@ Benchmark results (PHP 7.4.33, 1,000,000 iterations, 5 runs):
 | Case | Avg elapsed (ms) |
 | --- | --- |
 | No extension (disabled) | 63 |
-| Extension loaded: Off | 58 |
-| Extension loaded: Report | 648 |
-| Extension loaded: Report (sampling=5) | 227 |
-| Extension loaded: Error | 353 |
-| Opcode overhead (no report) | 90 |
-| Deprecated cost (with report) | 574 |
+| Extension loaded: Off | 57 |
+| Extension loaded: Report | 609 |
+| Extension loaded: Report (sampling=5) | 198 |
+| Extension loaded: Simulate | 165 |
+| Extension loaded: Simulate + Report | 626 |
+| Extension loaded: Error | 341 |
+| Opcode overhead (no report) | 68 |
+| Deprecated cost (with report) | 548 |
 
 ## Debugging with gdb
 

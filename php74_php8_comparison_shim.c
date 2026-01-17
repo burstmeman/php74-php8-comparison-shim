@@ -13,6 +13,8 @@
 #define PHP80_SNC_MODE_OFF 0
 #define PHP80_SNC_MODE_REPORT 1
 #define PHP80_SNC_MODE_ERROR 2
+#define PHP80_SNC_MODE_SIMULATE_AND_REPORT 3
+#define PHP80_SNC_MODE_SIMULATE 4
 
 typedef struct {
 	zend_uchar opcode;
@@ -40,6 +42,37 @@ static void p748_cmps_init_globals(zend_php74_php8_comparison_shim_globals *glob
 }
 
 static int p748_cmps_handlers_active = 0;
+
+static inline int p748_cmps_mode_forces_sampling_off(zend_long mode)
+{
+	return mode == PHP80_SNC_MODE_ERROR
+		|| mode == PHP80_SNC_MODE_SIMULATE_AND_REPORT
+		|| mode == PHP80_SNC_MODE_SIMULATE;
+}
+
+static inline int p748_cmps_mode_uses_sampling(zend_long mode)
+{
+	return !p748_cmps_mode_forces_sampling_off(mode)
+		&& mode != PHP80_SNC_MODE_OFF;
+}
+
+static inline int p748_cmps_mode_reports(zend_long mode)
+{
+	return mode == PHP80_SNC_MODE_REPORT
+		|| mode == PHP80_SNC_MODE_SIMULATE_AND_REPORT;
+}
+
+static inline int p748_cmps_mode_simulates(zend_long mode)
+{
+	return mode == PHP80_SNC_MODE_SIMULATE
+		|| mode == PHP80_SNC_MODE_SIMULATE_AND_REPORT;
+}
+
+static inline void p748_cmps_disable_sampling(void)
+{
+	PHP74_PHP8_CS_G(sampling_factor) = 0;
+	PHP74_PHP8_CS_G(sample_counter) = 0;
+}
 
 /* Install opcode handlers once when mode is enabled. */
 static void p748_cmps_enable_handlers(void)
@@ -104,6 +137,21 @@ static void p748_cmps_set_mode_from_string(const zend_string *value)
 	if (zend_string_equals_literal_ci(value, "error")
 		|| zend_string_equals_literal_ci(value, "2")) {
 		PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_ERROR;
+		p748_cmps_disable_sampling();
+		return;
+	}
+
+	if (zend_string_equals_literal_ci(value, "simulate_and_report")
+		|| zend_string_equals_literal_ci(value, "3")) {
+		PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_SIMULATE_AND_REPORT;
+		p748_cmps_disable_sampling();
+		return;
+	}
+
+	if (zend_string_equals_literal_ci(value, "simulate")
+		|| zend_string_equals_literal_ci(value, "4")) {
+		PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_SIMULATE;
+		p748_cmps_disable_sampling();
 		return;
 	}
 
@@ -114,6 +162,11 @@ static void p748_cmps_set_mode_from_string(const zend_string *value)
 static void p748_cmps_set_sampling_from_string(const zend_string *value)
 {
 	zend_long factor = 0;
+
+	if (p748_cmps_mode_forces_sampling_off(PHP74_PHP8_CS_G(mode))) {
+		p748_cmps_disable_sampling();
+		return;
+	}
 
 	if (value != NULL && ZSTR_LEN(value) > 0) {
 		factor = zend_atol(ZSTR_VAL(value), ZSTR_LEN(value));
@@ -147,6 +200,19 @@ static void p748_cmps_set_mode_from_cstr(const char *value)
 
 	if (strcasecmp(value, "error") == 0 || strcmp(value, "2") == 0) {
 		PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_ERROR;
+		p748_cmps_disable_sampling();
+		return;
+	}
+
+	if (strcasecmp(value, "simulate_and_report") == 0 || strcmp(value, "3") == 0) {
+		PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_SIMULATE_AND_REPORT;
+		p748_cmps_disable_sampling();
+		return;
+	}
+
+	if (strcasecmp(value, "simulate") == 0 || strcmp(value, "4") == 0) {
+		PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_SIMULATE;
+		p748_cmps_disable_sampling();
 		return;
 	}
 
@@ -157,6 +223,11 @@ static void p748_cmps_set_mode_from_cstr(const char *value)
 static void p748_cmps_set_sampling_from_cstr(const char *value)
 {
 	zend_long factor = 0;
+
+	if (p748_cmps_mode_forces_sampling_off(PHP74_PHP8_CS_G(mode))) {
+		p748_cmps_disable_sampling();
+		return;
+	}
 
 	if (value != NULL && value[0] != '\0') {
 		factor = zend_atol(value, strlen(value));
@@ -188,6 +259,10 @@ static const char *p748_cmps_mode_to_string(zend_long mode)
 			return "report";
 		case PHP80_SNC_MODE_ERROR:
 			return "error";
+		case PHP80_SNC_MODE_SIMULATE_AND_REPORT:
+			return "simulate_and_report";
+		case PHP80_SNC_MODE_SIMULATE:
+			return "simulate";
 		case PHP80_SNC_MODE_OFF:
 		default:
 			return "off";
@@ -249,6 +324,58 @@ static inline int p748_cmps_is_number_string_pair(const zval *op1, const zval *o
 		|| (p748_cmps_is_number(op2) && Z_TYPE_P(op1) == IS_STRING);
 }
 
+static int p748_cmps_simulate_php8_result(
+	zend_execute_data *execute_data,
+	const zend_op *opline,
+	const zval *op1,
+	const zval *op2)
+{
+	zend_string *op1_str;
+	zend_string *op2_str;
+	int cmp;
+	zval *result;
+
+	if (!p748_cmps_should_report(op1, op2)) {
+		return 0;
+	}
+
+	op1_str = zval_get_string(op1);
+	op2_str = zval_get_string(op2);
+	cmp = zend_binary_strcmp(
+		ZSTR_VAL(op1_str), ZSTR_LEN(op1_str),
+		ZSTR_VAL(op2_str), ZSTR_LEN(op2_str));
+
+	result = EX_VAR(opline->result.var);
+
+	switch (opline->opcode) {
+		case ZEND_IS_EQUAL:
+		case ZEND_CASE:
+			ZVAL_BOOL(result, cmp == 0);
+			break;
+		case ZEND_IS_NOT_EQUAL:
+			ZVAL_BOOL(result, cmp != 0);
+			break;
+		case ZEND_IS_SMALLER:
+			ZVAL_BOOL(result, cmp < 0);
+			break;
+		case ZEND_IS_SMALLER_OR_EQUAL:
+			ZVAL_BOOL(result, cmp <= 0);
+			break;
+		case ZEND_SPACESHIP:
+			ZVAL_LONG(result, (cmp > 0) - (cmp < 0));
+			break;
+		default:
+			zend_string_release(op1_str);
+			zend_string_release(op2_str);
+			return 0;
+	}
+
+	zend_string_release(op1_str);
+	zend_string_release(op2_str);
+
+	return 1;
+}
+
 static ZEND_INI_MH(p748_cmps_update_mode)
 {
 	if (stage == PHP_INI_STAGE_RUNTIME || stage == PHP_INI_STAGE_HTACCESS) {
@@ -281,8 +408,13 @@ static int p748_cmps_opcode_handler(zend_execute_data *execute_data)
 	zend_free_op free_op2 = NULL;
 	zval *op1;
 	zval *op2;
+	zend_long mode;
+	int opcode_result = ZEND_USER_OPCODE_DISPATCH;
+	int advance_opline = 0;
 
-	if (PHP74_PHP8_CS_G(mode) == PHP80_SNC_MODE_OFF) {
+	mode = PHP74_PHP8_CS_G(mode);
+
+	if (mode == PHP80_SNC_MODE_OFF) {
 		return ZEND_USER_OPCODE_DISPATCH;
 	}
 
@@ -295,7 +427,8 @@ static int p748_cmps_opcode_handler(zend_execute_data *execute_data)
 		ZVAL_DEREF(op1);
 		ZVAL_DEREF(op2);
 
-		if (p748_cmps_is_number_string_pair(op1, op2)) {
+		if (p748_cmps_is_number_string_pair(op1, op2)
+			&& p748_cmps_mode_uses_sampling(mode)) {
 			zend_long factor = PHP74_PHP8_CS_G(sampling_factor);
 			if (factor > 1) {
 				PHP74_PHP8_CS_G(sample_counter)++;
@@ -310,7 +443,7 @@ static int p748_cmps_opcode_handler(zend_execute_data *execute_data)
 			zend_string *op1_str = zval_get_string(op1);
 			zend_string *op2_str = zval_get_string(op2);
 
-			if (PHP74_PHP8_CS_G(mode) == PHP80_SNC_MODE_ERROR) {
+			if (mode == PHP80_SNC_MODE_ERROR) {
 				zend_throw_error(NULL,
 					"php74_php8_comparison_shim.mode: Non-strict comparison between "
 					"\"%s\" and \"%s\" using %s",
@@ -331,15 +464,24 @@ static int p748_cmps_opcode_handler(zend_execute_data *execute_data)
 				return ZEND_USER_OPCODE_CONTINUE;
 			}
 
-			zend_error(E_DEPRECATED,
-				"php74_php8_comparison_shim.mode: Non-strict comparison between "
-				"\"%s\" and \"%s\" using %s",
-				ZSTR_VAL(op1_str),
-				ZSTR_VAL(op2_str),
-				op);
+			if (p748_cmps_mode_reports(mode)) {
+				zend_error(E_DEPRECATED,
+					"php74_php8_comparison_shim.mode: Non-strict comparison between "
+					"\"%s\" and \"%s\" using %s",
+					ZSTR_VAL(op1_str),
+					ZSTR_VAL(op2_str),
+					op);
+			}
 
 			zend_string_release(op1_str);
 			zend_string_release(op2_str);
+		}
+
+		if (p748_cmps_mode_simulates(mode)) {
+			if (p748_cmps_simulate_php8_result(execute_data, opline, op1, op2)) {
+				opcode_result = ZEND_USER_OPCODE_CONTINUE;
+				advance_opline = 1;
+			}
 		}
 	}
 
@@ -351,7 +493,11 @@ cleanup:
 		zval_ptr_dtor_nogc(free_op2);
 	}
 
-	return ZEND_USER_OPCODE_DISPATCH;
+	if (advance_opline) {
+		execute_data->opline = opline + 1;
+	}
+
+	return opcode_result;
 }
 
 static PHP_MINIT_FUNCTION(php74_php8_comparison_shim)
