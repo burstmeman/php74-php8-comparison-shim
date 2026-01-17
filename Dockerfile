@@ -15,11 +15,14 @@ RUN apt-get update \
         unzip \
     && rm -rf /var/lib/apt/lists/*
 
+RUN true
 WORKDIR /ext
 COPY . /ext
 
 RUN phpize \
-    &&./configure --enable-php74-php8-comparison-shim \
+    &&./configure \
+        --enable-php74-php8-comparison-shim \
+        --enable-php74-php8-comparison-shim-risky \
     && make -j$(nproc) \
     && make install
 
