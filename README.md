@@ -30,6 +30,7 @@ Enable the extension and set the mode:
 ```
 extension=php74_php8_comparison_shim.so
 php74_php8_comparison_shim.mode=report
+php74_php8_comparison_shim.sampling_factor=0
 ```
 
 Allowed values (set at startup only):
@@ -40,6 +41,10 @@ Allowed values (set at startup only):
 
 Note: `php74_php8_comparison_shim.mode` is `PHP_INI_SYSTEM` and cannot be changed at runtime
 via `ini_set()`.
+
+Sampling factor:
+- `0` or `1` - check every comparison (no sampling)
+- `N` (> 1) - check once per `N` number/string comparisons
 
 ## Build (PHP 7.4.33)
 

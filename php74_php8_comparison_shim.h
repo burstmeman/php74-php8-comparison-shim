@@ -18,6 +18,8 @@ extern zend_module_entry php74_php8_comparison_shim_module_entry;
 
 ZEND_BEGIN_MODULE_GLOBALS(php74_php8_comparison_shim)
 	zend_long mode;
+	zend_long sampling_factor;
+	zend_long sample_counter;
 ZEND_END_MODULE_GLOBALS(php74_php8_comparison_shim)
 
 ZEND_EXTERN_MODULE_GLOBALS(php74_php8_comparison_shim)
