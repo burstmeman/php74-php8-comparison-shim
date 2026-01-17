@@ -1,11 +1,5 @@
 --TEST--
 Sampling factor reduces report frequency
---SKIPIF--
-<?php
-if (!extension_loaded("php74_php8_comparison_shim")) {
-    echo "skip";
-}
-?>
 --INI--
 php74_php8_comparison_shim.mode=report
 php74_php8_comparison_shim.sampling_factor=2

@@ -1,11 +1,5 @@
 --TEST--
 Simulate mode returns PHP 8.0 results without reporting
---SKIPIF--
-<?php
-if (!extension_loaded("php74_php8_comparison_shim")) {
-    echo "skip";
-}
-?>
 --INI--
 php74_php8_comparison_shim.mode=simulate
 display_errors=1

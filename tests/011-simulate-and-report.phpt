@@ -1,11 +1,5 @@
 --TEST--
 Simulate and report mode emits deprecations and returns PHP 8.0 results
---SKIPIF--
-<?php
-if (!extension_loaded("php74_php8_comparison_shim")) {
-    echo "skip";
-}
-?>
 --INI--
 php74_php8_comparison_shim.mode=simulate_and_report
 display_errors=1
