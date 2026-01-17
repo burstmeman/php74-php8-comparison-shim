@@ -1,0 +1,162 @@
+# php80_string_number_comparison
+
+Detects PHP 8.0 string-to-number comparison behavior changes while running on PHP 7.4.33.
+
+## What it does
+
+PHP 8 changed non-strict comparisons between numbers and non-numeric strings. This extension
+detects those comparisons at runtime on PHP 7.4 and can either report them or throw an error.
+
+Relevant PHP documentation:
+- [PHP 8.0 Migration Guide](https://www.php.net/manual/en/migration80.php)
+- [Loose comparisons](https://www.php.net/manual/en/types.comparisons.php)
+- [Error handling](https://www.php.net/manual/en/language.errors.php7.php)
+ 
+Behavior change examples:
+
+| Comparison | PHP 7.4 | PHP 8.0 |
+| --- | --- | --- |
+| `0 == "0"` | true | true |
+| `0 == "0.0"` | true | true |
+| `0 == "foo"` | true | false |
+| `0 == ""` | true | false |
+| `42 == " 42"` | true | true |
+| `42 == "42foo"` | true | false |
+
+## Configuration
+
+Enable the extension and set the mode:
+
+```
+extension=php80_string_number_comparison.so
+php80.string_number_comparison=report
+```
+
+Allowed values (set at startup only):
+
+- `off`    - extension logic disabled
+- `report` - emit deprecation warnings
+- `error`  - throw an Error
+
+Note: `php80.string_number_comparison` is `PHP_INI_SYSTEM` and cannot be changed at runtime
+via `ini_set()`.
+
+## Build (PHP 7.4.33)
+
+Prerequisites:
+
+- PHP 7.4.33 with development headers (`phpize`, `php-config`)
+- Build tools (`make`, `autoconf`, compiler toolchain)
+
+From the extension directory:
+
+```
+phpize
+CFLAGS="-g -O0" ./configure --enable-php80-string-number-comparison
+make -j$(nproc)
+```
+
+Install the module to your PHP extension dir:
+
+```
+make install
+```
+
+The build uses debug symbols via `-g -O0` (see `config.m4`), so you can debug with gdb.
+
+## Use with PHP
+
+Find where `make install` placed the module:
+
+```
+php-config --extension-dir
+```
+
+Then enable it via `php.ini`:
+
+```
+extension=php80_string_number_comparison.so
+php80.string_number_comparison=report
+```
+
+Or enable it for a single run:
+
+```
+php -d extension=php80_string_number_comparison.so \
+    -d php80.string_number_comparison=report \
+    your_script.php
+```
+
+## Run tests
+
+Build the extension first, then run:
+
+```
+make test
+```
+
+If multiple PHP versions are installed, point to the PHP 7.4 binary:
+
+```
+make test TEST_PHP_EXECUTABLE=/usr/bin/php7.4
+```
+
+To run a single test:
+
+```
+TESTS=tests/002-report.phpt make test
+```
+
+## Docker (Ubuntu)
+
+Prepare the container (build image):
+
+```
+docker build -t php80-snc-test .
+```
+
+Run the PHPT suite inside the container:
+
+```
+docker run --rm php80-snc-test
+```
+
+Run a single PHPT:
+
+```
+docker run --rm php80-snc-test bash -lc "TESTS=tests/002-report.phpt make test"
+```
+
+## Benchmark (overhead)
+
+Build the extension first, then run:
+
+```
+chmod +x bench/run.sh
+PHP_BIN=/opt/php/7.4.33/bin/php SNC_ITERATIONS=1000000 SNC_RUNS=5 bench/run.sh
+```
+
+Benchmark results (PHP 7.4.33, 1,000,000 iterations, 5 runs):
+
+| Case | Avg elapsed (ms) |
+| --- | --- |
+| No extension (disabled) | 207 |
+| Extension loaded: Off | 208 |
+| Extension loaded: Report | 1027 |
+| Extension loaded: Error | 525 |
+| Opcode overhead (no report) | 216 |
+| Deprecated cost (with report) | 784 |
+
+## Debugging with gdb
+
+Start PHP with the extension loaded:
+
+```
+php -d extension=php80_string_number_comparison.so -d php80.string_number_comparison=Report your_script.php
+```
+
+Then attach gdb:
+
+```
+gdb -p $(pgrep -n php)
+```

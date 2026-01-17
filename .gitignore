@@ -1,0 +1,17 @@
+/.libs/
+/modules/
+/*.lo
+/*.la
+/*.o
+/Makefile
+/Makefile.fragments
+/config.h
+/config.h.in
+/config.status
+/config.log
+/acinclude.m4
+/autom4te.cache/
+/build/
+**/.DS_Store
+.idea/
+.vscode/
