@@ -35,6 +35,8 @@ ZEND_DECLARE_MODULE_GLOBALS(php74_php8_comparison_shim)
 static void php80_snc_init_globals(zend_php74_php8_comparison_shim_globals *globals)
 {
 	globals->mode = PHP80_SNC_MODE_OFF;
+	globals->sampling_factor = 0;
+	globals->sample_counter = 0;
 }
 
 static int php80_snc_handlers_active = 0;
@@ -108,6 +110,23 @@ static void php80_snc_set_mode_from_string(const zend_string *value)
 	PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_OFF;
 }
 
+/* Parse INI value (zend_string) into sampling factor. */
+static void php80_snc_set_sampling_from_string(const zend_string *value)
+{
+	zend_long factor = 0;
+
+	if (value != NULL && ZSTR_LEN(value) > 0) {
+		factor = zend_atol(ZSTR_VAL(value), ZSTR_LEN(value));
+	}
+
+	if (factor < 0) {
+		factor = 0;
+	}
+
+	PHP74_PHP8_CS_G(sampling_factor) = factor;
+	PHP74_PHP8_CS_G(sample_counter) = 0;
+}
+
 /* Parse INI value (C string) into module mode. */
 static void php80_snc_set_mode_from_cstr(const char *value)
 {
@@ -132,6 +151,23 @@ static void php80_snc_set_mode_from_cstr(const char *value)
 	}
 
 	PHP74_PHP8_CS_G(mode) = PHP80_SNC_MODE_OFF;
+}
+
+/* Parse INI value (C string) into sampling factor. */
+static void php80_snc_set_sampling_from_cstr(const char *value)
+{
+	zend_long factor = 0;
+
+	if (value != NULL && value[0] != '\0') {
+		factor = zend_atol(value, strlen(value));
+	}
+
+	if (factor < 0) {
+		factor = 0;
+	}
+
+	PHP74_PHP8_CS_G(sampling_factor) = factor;
+	PHP74_PHP8_CS_G(sample_counter) = 0;
 }
 
 /* Apply current mode by enabling or disabling opcode handlers. */
@@ -207,6 +243,12 @@ static inline int php80_snc_should_report(const zval *op1, const zval *op2)
 		|| (php80_snc_is_number(op2) && php80_snc_is_non_numeric_string(op1));
 }
 
+static inline int php80_snc_is_number_string_pair(const zval *op1, const zval *op2)
+{
+	return (php80_snc_is_number(op1) && Z_TYPE_P(op2) == IS_STRING)
+		|| (php80_snc_is_number(op2) && Z_TYPE_P(op1) == IS_STRING);
+}
+
 static ZEND_INI_MH(php80_snc_update_mode)
 {
 	if (stage == PHP_INI_STAGE_RUNTIME || stage == PHP_INI_STAGE_HTACCESS) {
@@ -217,8 +259,19 @@ static ZEND_INI_MH(php80_snc_update_mode)
 	return SUCCESS;
 }
 
+static ZEND_INI_MH(php80_snc_update_sampling_factor)
+{
+	if (stage == PHP_INI_STAGE_RUNTIME || stage == PHP_INI_STAGE_HTACCESS) {
+		return FAILURE;
+	}
+
+	php80_snc_set_sampling_from_string(new_value);
+	return SUCCESS;
+}
+
 PHP_INI_BEGIN()
 	PHP_INI_ENTRY("php74_php8_comparison_shim.mode", "Off", PHP_INI_SYSTEM, php80_snc_update_mode)
+	PHP_INI_ENTRY("php74_php8_comparison_shim.sampling_factor", "0", PHP_INI_SYSTEM, php80_snc_update_sampling_factor)
 PHP_INI_END()
 
 static int php80_snc_opcode_handler(zend_execute_data *execute_data)
@@ -241,6 +294,16 @@ static int php80_snc_opcode_handler(zend_execute_data *execute_data)
 	if (op1 != NULL && op2 != NULL) {
 		ZVAL_DEREF(op1);
 		ZVAL_DEREF(op2);
+
+		if (php80_snc_is_number_string_pair(op1, op2)) {
+			zend_long factor = PHP74_PHP8_CS_G(sampling_factor);
+			if (factor > 1) {
+				PHP74_PHP8_CS_G(sample_counter)++;
+				if ((PHP74_PHP8_CS_G(sample_counter) % factor) != 0) {
+					goto cleanup;
+				}
+			}
+		}
 
 		if (php80_snc_should_report(op1, op2)) {
 			const char *op = php80_snc_opcode_to_operator(opline->opcode);
@@ -280,6 +343,7 @@ static int php80_snc_opcode_handler(zend_execute_data *execute_data)
 		}
 	}
 
+cleanup:
 	if (free_op1) {
 		zval_ptr_dtor_nogc(free_op1);
 	}
@@ -294,6 +358,7 @@ static PHP_MINIT_FUNCTION(php74_php8_comparison_shim)
 {
 	REGISTER_INI_ENTRIES();
 	php80_snc_set_mode_from_cstr(INI_STR("php74_php8_comparison_shim.mode"));
+	php80_snc_set_sampling_from_cstr(INI_STR("php74_php8_comparison_shim.sampling_factor"));
 	php80_snc_apply_mode();
 
 	return SUCCESS;
@@ -312,6 +377,7 @@ static PHP_MINFO_FUNCTION(php74_php8_comparison_shim)
 	php_info_print_table_start();
 	php_info_print_table_header(2, "php74_php8_comparison_shim support", "enabled");
 	php_info_print_table_row(2, "Mode", php80_snc_mode_to_string(PHP74_PHP8_CS_G(mode)));
+	php_info_print_table_row(2, "Sampling factor", INI_STR("php74_php8_comparison_shim.sampling_factor"));
 	php_info_print_table_end();
 
 	DISPLAY_INI_ENTRIES();
