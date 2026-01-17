@@ -53,6 +53,16 @@ run_case "Extension loaded: Report" \
   -d php74_php8_comparison_shim.mode=report \
   "${ROOT_DIR}/bench/compare.php"
 
+# Report mode with sampling. Expect lower cost from reduced reporting.
+run_case "Extension loaded: Report (sampling=5)" \
+  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=report \
+  "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=0 \
+  -d extension_dir="${ROOT_DIR}/modules" \
+  -d extension=php74_php8_comparison_shim.so \
+  -d php74_php8_comparison_shim.mode=report \
+  -d php74_php8_comparison_shim.sampling_factor=5 \
+  "${ROOT_DIR}/bench/compare.php"
+
 # Error mode with try/catch. Expect high overhead from throw/catch path.
 run_case "Extension loaded: Error" \
   env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=error SNC_VALIDATE=1 \
