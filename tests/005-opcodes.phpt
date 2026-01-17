@@ -2,12 +2,12 @@
 Report mode covers ==, !=, <, <= operators
 --SKIPIF--
 <?php
-if (!extension_loaded("php80_string_number_comparison")) {
+if (!extension_loaded("php74_php8_comparison_shim")) {
     echo "skip";
 }
 ?>
 --INI--
-php80.string_number_comparison=report
+php74_php8_comparison_shim.mode=report
 display_errors=1
 log_errors=0
 error_reporting=E_ALL
@@ -23,14 +23,14 @@ var_dump($n <= $s);
 ?>
 --EXPECTF--
 
-%rDeprecated: php80.string_number_comparison: Non-strict comparison between "0" and "foo" using == in .+ on line \d+%r
+%rDeprecated: php74_php8_comparison_shim.mode: Non-strict comparison between "0" and "foo" using == in .+ on line \d+%r
 bool(true)
 
-%rDeprecated: php80.string_number_comparison: Non-strict comparison between "0" and "foo" using != in .+ on line \d+%r
+%rDeprecated: php74_php8_comparison_shim.mode: Non-strict comparison between "0" and "foo" using != in .+ on line \d+%r
 bool(false)
 
-%rDeprecated: php80.string_number_comparison: Non-strict comparison between "0" and "foo" using < in .+ on line \d+%r
+%rDeprecated: php74_php8_comparison_shim.mode: Non-strict comparison between "0" and "foo" using < in .+ on line \d+%r
 bool(false)
 
-%rDeprecated: php80.string_number_comparison: Non-strict comparison between "0" and "foo" using <= in .+ on line \d+%r
+%rDeprecated: php74_php8_comparison_shim.mode: Non-strict comparison between "0" and "foo" using <= in .+ on line \d+%r
 bool(true)

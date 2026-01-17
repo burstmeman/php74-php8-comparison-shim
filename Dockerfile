@@ -19,7 +19,7 @@ WORKDIR /ext
 COPY . /ext
 
 RUN phpize \
-    && CFLAGS="-g -O0" ./configure --enable-php80-string-number-comparison \
+    && CFLAGS="-g -O0" ./configure --enable-php74-php8-comparison-shim \
     && make -j$(nproc) \
     && make install
 

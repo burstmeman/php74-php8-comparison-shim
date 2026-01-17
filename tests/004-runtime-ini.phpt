@@ -2,12 +2,12 @@
 Runtime ini_set cannot change mode
 --SKIPIF--
 <?php
-if (!extension_loaded("php80_string_number_comparison")) {
+if (!extension_loaded("php74_php8_comparison_shim")) {
     echo "skip";
 }
 ?>
 --INI--
-php80.string_number_comparison=off
+php74_php8_comparison_shim.mode=off
 display_errors=1
 log_errors=0
 error_reporting=E_ALL
@@ -16,7 +16,7 @@ error_reporting=E_ALL
 $a = 0;
 $b = "foo";
 
-var_dump(ini_set("php80.string_number_comparison", "report"));
+var_dump(ini_set("php74_php8_comparison_shim.mode", "report"));
 var_dump($a == $b);
 ?>
 --EXPECT--

@@ -2,12 +2,12 @@
 Off mode disables reporting
 --SKIPIF--
 <?php
-if (!extension_loaded("php80_string_number_comparison")) {
+if (!extension_loaded("php74_php8_comparison_shim")) {
     echo "skip";
 }
 ?>
 --INI--
-php80.string_number_comparison=off
+php74_php8_comparison_shim.mode=off
 display_errors=1
 log_errors=0
 error_reporting=E_ALL
