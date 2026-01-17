@@ -1,0 +1,9 @@
+* export-ignore
+
+tests/ -export-ignore
+tests/** -export-ignore
+config.m4 -export-ignore
+php74_php8_comparison_shim.c -export-ignore
+php74_php8_comparison_shim.h -export-ignore
+README.md -export-ignore
+LICENSE -export-ignore
