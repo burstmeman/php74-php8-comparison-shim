@@ -1,4 +1,4 @@
-# php80_string_number_comparison
+# php74_php8_comparison_shim
 
 Detects PHP 8.0 string-to-number comparison behavior changes while running on PHP 7.4.33.
 
@@ -28,8 +28,8 @@ Behavior change examples:
 Enable the extension and set the mode:
 
 ```
-extension=php80_string_number_comparison.so
-php80.string_number_comparison=report
+extension=php74_php8_comparison_shim.so
+php74_php8_comparison_shim.mode=report
 ```
 
 Allowed values (set at startup only):
@@ -38,7 +38,7 @@ Allowed values (set at startup only):
 - `report` - emit deprecation warnings
 - `error`  - throw an Error
 
-Note: `php80.string_number_comparison` is `PHP_INI_SYSTEM` and cannot be changed at runtime
+Note: `php74_php8_comparison_shim.mode` is `PHP_INI_SYSTEM` and cannot be changed at runtime
 via `ini_set()`.
 
 ## Build (PHP 7.4.33)
@@ -52,7 +52,7 @@ From the extension directory:
 
 ```
 phpize
-CFLAGS="-g -O0" ./configure --enable-php80-string-number-comparison
+CFLAGS="-g -O0" ./configure --enable-php74-php8-comparison-shim
 make -j$(nproc)
 ```
 
@@ -75,15 +75,15 @@ php-config --extension-dir
 Then enable it via `php.ini`:
 
 ```
-extension=php80_string_number_comparison.so
-php80.string_number_comparison=report
+extension=php74_php8_comparison_shim.so
+php74_php8_comparison_shim.mode=report
 ```
 
 Or enable it for a single run:
 
 ```
-php -d extension=php80_string_number_comparison.so \
-    -d php80.string_number_comparison=report \
+php -d extension=php74_php8_comparison_shim.so \
+    -d php74_php8_comparison_shim.mode=report \
     your_script.php
 ```
 
@@ -112,19 +112,19 @@ TESTS=tests/002-report.phpt make test
 Prepare the container (build image):
 
 ```
-docker build -t php80-snc-test .
+docker build -t php74-php8-comparison-shim-test .
 ```
 
 Run the PHPT suite inside the container:
 
 ```
-docker run --rm php80-snc-test
+docker run --rm php74-php8-comparison-shim-test
 ```
 
 Run a single PHPT:
 
 ```
-docker run --rm php80-snc-test bash -lc "TESTS=tests/002-report.phpt make test"
+docker run --rm php74-php8-comparison-shim-test bash -lc "TESTS=tests/002-report.phpt make test"
 ```
 
 ## Benchmark (overhead)
@@ -152,7 +152,7 @@ Benchmark results (PHP 7.4.33, 1,000,000 iterations, 5 runs):
 Start PHP with the extension loaded:
 
 ```
-php -d extension=php80_string_number_comparison.so -d php80.string_number_comparison=Report your_script.php
+php -d extension=php74_php8_comparison_shim.so -d php74_php8_comparison_shim.mode=Report your_script.php
 ```
 
 Then attach gdb:

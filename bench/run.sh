@@ -40,8 +40,8 @@ run_case "No extension (disabled)" \
 run_case "Extension loaded: Off" \
   env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=off \
   "${PHP_BIN}" -n -d extension_dir="${ROOT_DIR}/modules" \
-  -d extension=php80_string_number_comparison.so \
-  -d php80.string_number_comparison=off \
+  -d extension=php74_php8_comparison_shim.so \
+  -d php74_php8_comparison_shim.mode=off \
   "${ROOT_DIR}/bench/compare.php"
 
 # Report mode with mixed comparisons. Expect higher time from zend_error().
@@ -49,8 +49,8 @@ run_case "Extension loaded: Report" \
   env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=report \
   "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=0 \
   -d extension_dir="${ROOT_DIR}/modules" \
-  -d extension=php80_string_number_comparison.so \
-  -d php80.string_number_comparison=report \
+  -d extension=php74_php8_comparison_shim.so \
+  -d php74_php8_comparison_shim.mode=report \
   "${ROOT_DIR}/bench/compare.php"
 
 # Error mode with try/catch. Expect high overhead from throw/catch path.
@@ -58,8 +58,8 @@ run_case "Extension loaded: Error" \
   env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=error SNC_VALIDATE=1 \
   "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=0 \
   -d extension_dir="${ROOT_DIR}/modules" \
-  -d extension=php80_string_number_comparison.so \
-  -d php80.string_number_comparison=error \
+  -d extension=php74_php8_comparison_shim.so \
+  -d php74_php8_comparison_shim.mode=error \
   "${ROOT_DIR}/bench/compare.php"
 
 # Report mode but numeric strings only. Measures opcode handler overhead only.
@@ -67,8 +67,8 @@ run_case "Opcode overhead (no report)" \
   env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=report \
   "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=0 \
   -d extension_dir="${ROOT_DIR}/modules" \
-  -d extension=php80_string_number_comparison.so \
-  -d php80.string_number_comparison=report \
+  -d extension=php74_php8_comparison_shim.so \
+  -d php74_php8_comparison_shim.mode=report \
   "${ROOT_DIR}/bench/bench_opcode_overhead.php"
 
 # Report mode with non-numeric strings. Measures zend_error() cost.
@@ -76,6 +76,6 @@ run_case "Deprecated cost (with report)" \
   env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=report \
   "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=E_ALL \
   -d extension_dir="${ROOT_DIR}/modules" \
-  -d extension=php80_string_number_comparison.so \
-  -d php80.string_number_comparison=report \
+  -d extension=php74_php8_comparison_shim.so \
+  -d php74_php8_comparison_shim.mode=report \
   "${ROOT_DIR}/bench/bench_deprecated_cost.php"
