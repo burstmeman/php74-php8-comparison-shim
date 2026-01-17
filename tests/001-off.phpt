@@ -1,11 +1,5 @@
 --TEST--
 Off mode disables reporting
---SKIPIF--
-<?php
-if (!extension_loaded("php74_php8_comparison_shim")) {
-    echo "skip";
-}
-?>
 --INI--
 php74_php8_comparison_shim.mode=off
 display_errors=1

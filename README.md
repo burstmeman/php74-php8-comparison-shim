@@ -8,20 +8,21 @@ PHP 8 changed non-strict comparisons between numbers and non-numeric strings. Th
 detects those comparisons at runtime on PHP 7.4 and can either report them or throw an error.
 
 Relevant PHP documentation:
+
 - [PHP 8.0 Migration Guide](https://www.php.net/manual/en/migration80.php)
 - [Loose comparisons](https://www.php.net/manual/en/types.comparisons.php)
 - [Error handling](https://www.php.net/manual/en/language.errors.php7.php)
- 
+
 Behavior change examples:
 
-| Comparison | PHP 7.4 | PHP 8.0 |
-| --- | --- | --- |
-| `0 == "0"` | true | true |
-| `0 == "0.0"` | true | true |
-| `0 == "foo"` | true | false |
-| `0 == ""` | true | false |
-| `42 == " 42"` | true | true |
-| `42 == "42foo"` | true | false |
+| Comparison      | PHP 7.4 | PHP 8.0 |
+|-----------------|---------|---------|
+| `0 == "0"`      | true    | true    |
+| `0 == "0.0"`    | true    | true    |
+| `0 == "foo"`    | true    | false   |
+| `0 == ""`       | true    | false   |
+| `42 == " 42"`   | true    | true    |
+| `42 == "42foo"` | true    | false   |
 
 ## Configuration
 
@@ -49,6 +50,7 @@ Note: `php74_php8_comparison_shim.mode` is `PHP_INI_SYSTEM` and cannot be change
 via `ini_set()`.
 
 Sampling factor:
+
 - `0` or `1` - check every comparison (no sampling)
 - `N` (> 1) - check once per `N` number/string comparisons
 
@@ -77,7 +79,7 @@ make -j$(nproc)
 make install
 ```
 
-To enable simulate modes, pass the risky flag at build time:
+To enable error or simulate modes, pass the risky flag at build time:
 
 ```
 phpize
@@ -196,17 +198,17 @@ PHP_BIN=/opt/php/7.4.33/bin/php SNC_ITERATIONS=1000000 SNC_RUNS=5 bench/run.sh
 
 Benchmark results (PHP 7.4.33, 1,000,000 iterations, 5 runs):
 
-| Case | Avg elapsed (ms) |
-| --- | --- |
-| No extension (disabled) | 66 |
-| Extension loaded: Off | 64 |
-| Extension loaded: Report | 608 |
-| Extension loaded: Report (sampling=5) | 197 |
-| Extension loaded: Simulate | 171 |
-| Extension loaded: Simulate + Report | 623 |
-| Extension loaded: Error | 339 |
-| Opcode overhead (no report) | 67 |
-| Deprecated cost (with report) | 538 |
+| Case                                  | Avg elapsed (ms) |
+|---------------------------------------|------------------|
+| No extension (disabled)               | 66               |
+| Extension loaded: Off                 | 64               |
+| Extension loaded: Report              | 608              |
+| Extension loaded: Report (sampling=5) | 197              |
+| Extension loaded: Simulate            | 171              |
+| Extension loaded: Simulate + Report   | 623              |
+| Extension loaded: Error               | 339              |
+| Opcode overhead (no report)           | 67               |
+| Deprecated cost (with report)         | 538              |
 
 ## Debugging with gdb
 
