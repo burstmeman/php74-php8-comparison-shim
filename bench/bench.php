@@ -65,6 +65,6 @@ for ($i = 0; $i < $iterations; $i++) {
         }
     }
 }
-$elapsedNs = $measureInternal ? (hrtime(true) - $start) : 0;
+$comparisonsElapsedNs = $measureInternal ? (hrtime(true) - $start) : 0;
 
-echo "elapsed_ns={$elapsedNs}\n";
+echo "comparisons_elapsed_ns={$comparisonsElapsedNs}\n";
