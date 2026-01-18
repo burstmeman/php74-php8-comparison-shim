@@ -93,8 +93,8 @@ static const char *p748_cmps_opcode_to_operator(zend_uchar opcode)
 static int p748_cmps_simulate_php8_result(
 	zend_execute_data *execute_data,
 	const zend_op *opline,
-	const zval *op1,
-	const zval *op2)
+	zval *op1,
+	zval *op2)
 {
 	zend_string *op1_str;
 	zend_string *op2_str;
