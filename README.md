@@ -56,6 +56,20 @@ Sampling factor:
 
 Sampling is forced to `0` in `error`, `simulate_and_report`, and `simulate` modes.
 
+Reporting mode:
+
+- `php74_php8_comparison_shim.report_mode=sync` (default) - emit deprecations immediately
+- `php74_php8_comparison_shim.report_mode=defer` - buffer and emit deprecations at request shutdown
+
+Deferred reporting is designed for php-fpm: warnings are emitted after the response is sent,
+so the request latency reflects only comparison work. The extension captures file/line at the
+comparison site and emits one report per file:line.
+
+Report buffer limit:
+
+- `php74_php8_comparison_shim.report_limit=128` (default) - max number of buffered entries
+- `0` - unlimited
+
 ## Install
 
 1. Download the latest release archive from
