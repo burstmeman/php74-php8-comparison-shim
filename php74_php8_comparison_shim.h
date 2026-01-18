@@ -17,14 +17,14 @@ extern zend_module_entry php74_php8_comparison_shim_module_entry;
 #endif
 
 ZEND_BEGIN_MODULE_GLOBALS(php74_php8_comparison_shim)
-	zend_long mode;
-	zend_long sampling_factor;
-	zend_long sample_counter;
-	zend_long report_mode;
-	zend_long report_limit;
-	zend_bool report_overflowed;
-	zend_bool report_table_init;
-	HashTable report_table;
+    zend_long mode;
+    zend_long sampling_factor;
+    zend_long sample_counter;
+    zend_long report_mode;
+    zend_long report_limit;
+    zend_bool report_overflowed;
+    zend_bool report_table_init;
+    HashTable report_table;
 ZEND_END_MODULE_GLOBALS(php74_php8_comparison_shim)
 
 ZEND_EXTERN_MODULE_GLOBALS(php74_php8_comparison_shim)

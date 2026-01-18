@@ -198,17 +198,18 @@ PHP_BIN=/opt/php/7.4.33/bin/php SNC_ITERATIONS=1000000 SNC_RUNS=5 bench/run.sh
 
 Benchmark results (PHP 7.4.33, 1,000,000 iterations, 5 runs):
 
-| Case                                  | Avg elapsed (ms) |
-|---------------------------------------|------------------|
-| No extension (disabled)               | 66               |
-| Extension loaded: Off                 | 64               |
-| Extension loaded: Report              | 608              |
-| Extension loaded: Report (sampling=5) | 197              |
-| Extension loaded: Simulate            | 171              |
-| Extension loaded: Simulate + Report   | 623              |
-| Extension loaded: Error               | 339              |
-| Opcode overhead (no report)           | 67               |
-| Deprecated cost (with report)         | 538              |
+% diff is computed from avg_total_elapsed_ms against the baseline (no extension).
+
+| Case                               | Avg total (ms) | Avg comparisons (ms) | % diff vs baseline |
+|------------------------------------|----------------|----------------------|--------------------|
+| No extension (disabled)            | 156            | 149                  | 0.0%               |
+| Extension loaded: Off              | 155            | 148                  | -0.6%              |
+| Extension loaded: Report           | 703            | 697                  | +350.6%            |
+| Extension loaded: Report (sampling=5) | 274         | 268                  | +75.6%             |
+| Extension loaded: Simulate         | 209            | 203                  | +34.0%             |
+| Extension loaded: Simulate + Report | 702           | 696                  | +350.0%            |
+| Extension loaded: Error            | 844            | 837                  | +441.0%            |
+| Extension loaded: Report (defer)   | 323            | 316                  | +107.1%            |
 
 ## Debugging with gdb
 

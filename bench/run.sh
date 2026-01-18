@@ -17,7 +17,7 @@ run_case() {
 
   local start_ns end_ns elapsed_ms
   local total_ms=0
-  local total_internal_ns=0
+  local total_comparisons_ns=0
   for _ in $(seq 1 "${RUNS}"); do
     start_ns=$(date +%s%N)
     output="$("$@" 2>/dev/null)"
@@ -25,18 +25,18 @@ run_case() {
     elapsed_ms=$(( (end_ns - start_ns) / 1000000 ))
     total_ms=$(( total_ms + elapsed_ms ))
 
-    internal_ns=$(printf '%s\n' "${output}" | sed -n 's/^elapsed_ns=//p' | tail -n 1)
-    internal_ns=${internal_ns:-0}
-    total_internal_ns=$(( total_internal_ns + internal_ns ))
+    comparisons_ns=$(printf '%s\n' "${output}" | sed -n 's/^comparisons_elapsed_ns=//p' | tail -n 1)
+    comparisons_ns=${comparisons_ns:-0}
+    total_comparisons_ns=$(( total_comparisons_ns + comparisons_ns ))
   done
 
-  local avg_ms=$(( total_ms / RUNS ))
-  local avg_internal_ns=$(( total_internal_ns / RUNS ))
-  local avg_internal_ms=$(( avg_internal_ns / 1000000 ))
+  local avg_total_ms=$(( total_ms / RUNS ))
+  local avg_comparisons_ns=$(( total_comparisons_ns / RUNS ))
+  local avg_comparisons_ms=$(( avg_comparisons_ns / 1000000 ))
   echo "case=${label}"
-  echo "avg_elapsed_ms=${avg_ms}"
-  echo "avg_comparisons_elapsed_ns=${avg_internal_ns}"
-  echo "avg_comparisons_elapsed_ms=${avg_internal_ms}"
+  echo "avg_total_elapsed_ms=${avg_total_ms}"
+  echo "avg_comparisons_elapsed_ns=${avg_comparisons_ns}"
+  echo "avg_comparisons_elapsed_ms=${avg_comparisons_ms}"
   echo
 }
 
@@ -56,7 +56,7 @@ run_case "Extension loaded: Off" \
 # Report mode with mixed comparisons. Expect higher time from zend_error().
 run_case "Extension loaded: Report" \
   env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=report SNC_CASE=compare \
-  "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=0 \
+  "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=E_ALL \
   -d extension_dir="${ROOT_DIR}/modules" \
   -d extension=php74_php8_comparison_shim.so \
   -d php74_php8_comparison_shim.mode=report \
@@ -65,7 +65,7 @@ run_case "Extension loaded: Report" \
 # Report mode with sampling. Expect lower cost from reduced reporting.
 run_case "Extension loaded: Report (sampling=5)" \
   env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=report SNC_CASE=compare \
-  "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=0 \
+  "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=E_ALL \
   -d extension_dir="${ROOT_DIR}/modules" \
   -d extension=php74_php8_comparison_shim.so \
   -d php74_php8_comparison_shim.mode=report \
@@ -84,7 +84,7 @@ run_case "Extension loaded: Simulate" \
 # Simulate and report: returns PHP 8.0 results with deprecations.
 run_case "Extension loaded: Simulate + Report" \
   env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=simulate_and_report SNC_CASE=compare \
-  "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=0 \
+  "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=E_ALL \
   -d extension_dir="${ROOT_DIR}/modules" \
   -d extension=php74_php8_comparison_shim.so \
   -d php74_php8_comparison_shim.mode=simulate_and_report \
@@ -100,7 +100,7 @@ run_case "Extension loaded: Error" \
   "${ROOT_DIR}/bench/bench.php"
 
 # Report mode but numeric strings only. Measures opcode handler overhead only.
-run_case "Opcode overhead (no report)" \
+run_case "Opcodes iteration overhead" \
   env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=report SNC_CASE=opcode_overhead \
   "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=0 \
   -d extension_dir="${ROOT_DIR}/modules" \
@@ -109,7 +109,7 @@ run_case "Opcode overhead (no report)" \
   "${ROOT_DIR}/bench/bench.php"
 
 # Report mode with non-numeric strings. Measures zend_error() cost.
-run_case "Deprecated cost (with report)" \
+run_case "Deprecation log cost" \
   env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=report SNC_CASE=deprecated_cost \
   "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=E_ALL \
   -d extension_dir="${ROOT_DIR}/modules" \
