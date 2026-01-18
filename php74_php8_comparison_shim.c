@@ -36,11 +36,14 @@ PHP_INI_BEGIN()
 	PHP_INI_ENTRY("php74_php8_comparison_shim.sampling_factor", "0", PHP_INI_SYSTEM, p748_cmps_update_sampling_factor)
 PHP_INI_END()
 
-static void p748_cmps_init_globals(zend_php74_php8_comparison_shim_globals *globals)
+static void p748_cmps_init_globals(void *globals)
 {
-	globals->mode = P748_CMPS_MODE_OFF;
-	globals->sampling_factor = 0;
-	globals->sample_counter = 0;
+	zend_php74_php8_comparison_shim_globals *cmps_globals =
+		(zend_php74_php8_comparison_shim_globals *)globals;
+
+	cmps_globals->mode = P748_CMPS_MODE_OFF;
+	cmps_globals->sampling_factor = 0;
+	cmps_globals->sample_counter = 0;
 }
 
 static PHP_MINIT_FUNCTION(php74_php8_comparison_shim)
