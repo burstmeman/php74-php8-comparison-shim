@@ -15,14 +15,24 @@
 #define P748_CMPS_MODE_SIMULATE_AND_REPORT 3
 #define P748_CMPS_MODE_SIMULATE 4
 
+#define P748_CMPS_REPORT_MODE_SYNC 0
+#define P748_CMPS_REPORT_MODE_DEFER 1
+
 /* Public surface for cross-file use. */
 void p748_cmps_set_mode_from_string(const zend_string *value);
 void p748_cmps_set_sampling_from_string(const zend_string *value);
+void p748_cmps_set_report_mode_from_string(const zend_string *value);
 void p748_cmps_set_mode_from_cstr(const char *value);
 void p748_cmps_set_sampling_from_cstr(const char *value);
+void p748_cmps_set_report_mode_from_cstr(const char *value);
 void p748_cmps_apply_mode(void);
 void p748_cmps_disable_handlers(void);
 const char *p748_cmps_mode_to_string(zend_long mode);
+const char *p748_cmps_report_mode_to_string(zend_long mode);
+void p748_cmps_report_buffer_init(void);
+void p748_cmps_report_buffer_flush(void);
+void p748_cmps_report_buffer_shutdown(void);
+void p748_cmps_report_enqueue(const char *op, zval *op1, zval *op2);
 
 /* Inline helpers used by multiple compilation units. */
 static inline int p748_cmps_mode_forces_sampling_off(zend_long mode)
@@ -48,6 +58,11 @@ static inline int p748_cmps_mode_simulates(zend_long mode)
 {
 	return mode == P748_CMPS_MODE_SIMULATE
 		|| mode == P748_CMPS_MODE_SIMULATE_AND_REPORT;
+}
+
+static inline int p748_cmps_report_mode_defer(zend_long mode)
+{
+	return mode == P748_CMPS_REPORT_MODE_DEFER;
 }
 
 static inline void p748_cmps_disable_sampling(void)

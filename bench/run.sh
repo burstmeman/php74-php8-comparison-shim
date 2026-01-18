@@ -17,93 +17,112 @@ run_case() {
 
   local start_ns end_ns elapsed_ms
   local total_ms=0
+  local total_internal_ns=0
   for _ in $(seq 1 "${RUNS}"); do
     start_ns=$(date +%s%N)
-    "$@" >/dev/null 2>&1
+    output="$("$@" 2>/dev/null)"
     end_ns=$(date +%s%N)
     elapsed_ms=$(( (end_ns - start_ns) / 1000000 ))
     total_ms=$(( total_ms + elapsed_ms ))
+
+    internal_ns=$(printf '%s\n' "${output}" | sed -n 's/^elapsed_ns=//p' | tail -n 1)
+    internal_ns=${internal_ns:-0}
+    total_internal_ns=$(( total_internal_ns + internal_ns ))
   done
 
   local avg_ms=$(( total_ms / RUNS ))
+  local avg_internal_ns=$(( total_internal_ns / RUNS ))
+  local avg_internal_ms=$(( avg_internal_ns / 1000000 ))
   echo "case=${label}"
   echo "avg_elapsed_ms=${avg_ms}"
+  echo "avg_comparisons_elapsed_ns=${avg_internal_ns}"
+  echo "avg_comparisons_elapsed_ms=${avg_internal_ms}"
   echo
 }
 
 # Baseline: no extension loaded. This is the lowest expected time.
 run_case "No extension (disabled)" \
-  env SNC_ITERATIONS="${ITERATIONS}" \
-  "${PHP_BIN}" -n "${ROOT_DIR}/bench/compare.php"
+  env SNC_ITERATIONS="${ITERATIONS}" SNC_CASE=compare \
+  "${PHP_BIN}" -n "${ROOT_DIR}/bench/bench.php"
 
 # Off mode: handlers are not installed. Should be close to baseline.
 run_case "Extension loaded: Off" \
-  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=off \
+  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=off SNC_CASE=compare \
   "${PHP_BIN}" -n -d extension_dir="${ROOT_DIR}/modules" \
   -d extension=php74_php8_comparison_shim.so \
   -d php74_php8_comparison_shim.mode=off \
-  "${ROOT_DIR}/bench/compare.php"
+  "${ROOT_DIR}/bench/bench.php"
 
 # Report mode with mixed comparisons. Expect higher time from zend_error().
 run_case "Extension loaded: Report" \
-  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=report \
+  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=report SNC_CASE=compare \
   "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=0 \
   -d extension_dir="${ROOT_DIR}/modules" \
   -d extension=php74_php8_comparison_shim.so \
   -d php74_php8_comparison_shim.mode=report \
-  "${ROOT_DIR}/bench/compare.php"
+  "${ROOT_DIR}/bench/bench.php"
 
 # Report mode with sampling. Expect lower cost from reduced reporting.
 run_case "Extension loaded: Report (sampling=5)" \
-  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=report \
+  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=report SNC_CASE=compare \
   "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=0 \
   -d extension_dir="${ROOT_DIR}/modules" \
   -d extension=php74_php8_comparison_shim.so \
   -d php74_php8_comparison_shim.mode=report \
   -d php74_php8_comparison_shim.sampling_factor=5 \
-  "${ROOT_DIR}/bench/compare.php"
+  "${ROOT_DIR}/bench/bench.php"
 
 # Simulate mode: returns PHP 8.0 results without reporting.
 run_case "Extension loaded: Simulate" \
-  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=simulate \
+  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=simulate SNC_CASE=compare \
   "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=0 \
   -d extension_dir="${ROOT_DIR}/modules" \
   -d extension=php74_php8_comparison_shim.so \
   -d php74_php8_comparison_shim.mode=simulate \
-  "${ROOT_DIR}/bench/compare.php"
+  "${ROOT_DIR}/bench/bench.php"
 
 # Simulate and report: returns PHP 8.0 results with deprecations.
 run_case "Extension loaded: Simulate + Report" \
-  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=simulate_and_report \
+  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=simulate_and_report SNC_CASE=compare \
   "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=0 \
   -d extension_dir="${ROOT_DIR}/modules" \
   -d extension=php74_php8_comparison_shim.so \
   -d php74_php8_comparison_shim.mode=simulate_and_report \
-  "${ROOT_DIR}/bench/compare.php"
+  "${ROOT_DIR}/bench/bench.php"
 
 # Error mode with try/catch. Expect high overhead from throw/catch path.
 run_case "Extension loaded: Error" \
-  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=error SNC_VALIDATE=1 \
+  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=error SNC_VALIDATE=1 SNC_ALLOW_THROW=1 SNC_CASE=compare \
   "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=0 \
   -d extension_dir="${ROOT_DIR}/modules" \
   -d extension=php74_php8_comparison_shim.so \
   -d php74_php8_comparison_shim.mode=error \
-  "${ROOT_DIR}/bench/compare.php"
+  "${ROOT_DIR}/bench/bench.php"
 
 # Report mode but numeric strings only. Measures opcode handler overhead only.
 run_case "Opcode overhead (no report)" \
-  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=report \
+  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=report SNC_CASE=opcode_overhead \
   "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=0 \
   -d extension_dir="${ROOT_DIR}/modules" \
   -d extension=php74_php8_comparison_shim.so \
   -d php74_php8_comparison_shim.mode=report \
-  "${ROOT_DIR}/bench/bench_opcode_overhead.php"
+  "${ROOT_DIR}/bench/bench.php"
 
 # Report mode with non-numeric strings. Measures zend_error() cost.
 run_case "Deprecated cost (with report)" \
-  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=report \
+  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=report SNC_CASE=deprecated_cost \
   "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=E_ALL \
   -d extension_dir="${ROOT_DIR}/modules" \
   -d extension=php74_php8_comparison_shim.so \
   -d php74_php8_comparison_shim.mode=report \
-  "${ROOT_DIR}/bench/bench_deprecated_cost.php"
+  "${ROOT_DIR}/bench/bench.php"
+
+# Report mode with deferred reporting; measure only comparison loop time.
+run_case "Extension loaded: Report (defer)" \
+  env SNC_ITERATIONS="${ITERATIONS}" SNC_MODE=report SNC_CASE=defer_report SNC_MEASURE_INTERNAL=1 \
+  "${PHP_BIN}" -n -d display_errors=0 -d log_errors=0 -d error_reporting=E_ALL \
+  -d extension_dir="${ROOT_DIR}/modules" \
+  -d extension=php74_php8_comparison_shim.so \
+  -d php74_php8_comparison_shim.mode=report \
+  -d php74_php8_comparison_shim.report_mode=defer \
+  "${ROOT_DIR}/bench/bench.php"

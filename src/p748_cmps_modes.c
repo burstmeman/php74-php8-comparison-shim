@@ -78,6 +78,28 @@ void p748_cmps_set_sampling_from_string(const zend_string *value)
 	PHP74_PHP8_CS_G(sample_counter) = 0;
 }
 
+void p748_cmps_set_report_mode_from_string(const zend_string *value)
+{
+	if (value == NULL || ZSTR_LEN(value) == 0) {
+		PHP74_PHP8_CS_G(report_mode) = P748_CMPS_REPORT_MODE_SYNC;
+		return;
+	}
+
+	if (zend_string_equals_literal_ci(value, "sync")
+		|| zend_string_equals_literal_ci(value, "0")) {
+		PHP74_PHP8_CS_G(report_mode) = P748_CMPS_REPORT_MODE_SYNC;
+		return;
+	}
+
+	if (zend_string_equals_literal_ci(value, "defer")
+		|| zend_string_equals_literal_ci(value, "1")) {
+		PHP74_PHP8_CS_G(report_mode) = P748_CMPS_REPORT_MODE_DEFER;
+		return;
+	}
+
+	PHP74_PHP8_CS_G(report_mode) = P748_CMPS_REPORT_MODE_SYNC;
+}
+
 void p748_cmps_set_mode_from_cstr(const char *value)
 {
 	if (value == NULL || value[0] == '\0') {
@@ -149,6 +171,26 @@ void p748_cmps_set_sampling_from_cstr(const char *value)
 	PHP74_PHP8_CS_G(sample_counter) = 0;
 }
 
+void p748_cmps_set_report_mode_from_cstr(const char *value)
+{
+	if (value == NULL || value[0] == '\0') {
+		PHP74_PHP8_CS_G(report_mode) = P748_CMPS_REPORT_MODE_SYNC;
+		return;
+	}
+
+	if (strcasecmp(value, "sync") == 0 || strcmp(value, "0") == 0) {
+		PHP74_PHP8_CS_G(report_mode) = P748_CMPS_REPORT_MODE_SYNC;
+		return;
+	}
+
+	if (strcasecmp(value, "defer") == 0 || strcmp(value, "1") == 0) {
+		PHP74_PHP8_CS_G(report_mode) = P748_CMPS_REPORT_MODE_DEFER;
+		return;
+	}
+
+	PHP74_PHP8_CS_G(report_mode) = P748_CMPS_REPORT_MODE_SYNC;
+}
+
 const char *p748_cmps_mode_to_string(zend_long mode)
 {
 	switch (mode) {
@@ -163,5 +205,16 @@ const char *p748_cmps_mode_to_string(zend_long mode)
 		case P748_CMPS_MODE_OFF:
 		default:
 			return "off";
+	}
+}
+
+const char *p748_cmps_report_mode_to_string(zend_long mode)
+{
+	switch (mode) {
+		case P748_CMPS_REPORT_MODE_DEFER:
+			return "defer";
+		case P748_CMPS_REPORT_MODE_SYNC:
+		default:
+			return "sync";
 	}
 }
