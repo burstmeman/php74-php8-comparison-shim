@@ -26,4 +26,6 @@ RUN phpize \
     && make -j$(nproc) \
     && make install
 
+ENV TEST_PHP_ARGS="--show-diff"
+
 CMD ["make", "test"]

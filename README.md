@@ -70,6 +70,12 @@ Report buffer limit:
 - `php74_php8_comparison_shim.report_limit=128` (default) - max number of buffered entries
 - `0` - unlimited
 
+Runtime API:
+
+- `php74_php8_cmps_set_sampling(int $sampling_factor): bool` - change the sampling factor during runtime.
+  Returns `false` when the current mode forces sampling off; otherwise updates the factor and
+  resets the internal counter.
+
 ## Install
 
 1. Download the latest release archive from

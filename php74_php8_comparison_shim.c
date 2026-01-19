@@ -10,6 +10,37 @@
 
 ZEND_DECLARE_MODULE_GLOBALS(php74_php8_comparison_shim)
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_php74_php8_cmps_set_sampling, 0, 1, _IS_BOOL, 0)
+    ZEND_ARG_TYPE_INFO(0, sampling_factor, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+PHP_FUNCTION(php74_php8_cmps_set_sampling)
+{
+    zend_long factor;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_LONG(factor)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (factor < 0) {
+        factor = 0;
+    }
+
+    if (p748_cmps_mode_forces_sampling_off(PHP74_PHP8_CS_G(mode))) {
+        p748_cmps_disable_sampling();
+        RETURN_FALSE;
+    }
+
+    PHP74_PHP8_CS_G(sampling_factor) = factor;
+    PHP74_PHP8_CS_G(sample_counter) = 0;
+    RETURN_TRUE;
+}
+
+static const zend_function_entry php74_php8_comparison_shim_functions[] = {
+    PHP_FE(php74_php8_cmps_set_sampling, arginfo_php74_php8_cmps_set_sampling)
+    PHP_FE_END
+};
+
 static ZEND_INI_MH(p748_cmps_update_mode)
 {
     if (stage == PHP_INI_STAGE_RUNTIME || stage == PHP_INI_STAGE_HTACCESS) {
@@ -152,7 +183,7 @@ static PHP_MINFO_FUNCTION(php74_php8_comparison_shim)
 zend_module_entry php74_php8_comparison_shim_module_entry = {
     STANDARD_MODULE_HEADER,
     "php74_php8_comparison_shim",
-    NULL,
+    php74_php8_comparison_shim_functions,
     PHP_MINIT(php74_php8_comparison_shim),
     PHP_MSHUTDOWN(php74_php8_comparison_shim),
     PHP_RINIT(php74_php8_comparison_shim),
