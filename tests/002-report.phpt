@@ -20,12 +20,12 @@ var_dump($b == "42foo");
 bool(true)
 bool(true)
 
-%rDeprecated: php74_php8_comparison_shim.mode: Non-strict comparison between "0" and "foo" using == in .+ on line \d+%r
+%rDeprecated: php74_php8_comparison_shim: Non-strict comparison between "0" and "foo" using == in .+ on line \d+%r
 bool(true)
 
-%rDeprecated: php74_php8_comparison_shim.mode: Non-strict comparison between "0" and "" using == in .+ on line \d+%r
+%rDeprecated: php74_php8_comparison_shim: Non-strict comparison between "0" and "" using == in .+ on line \d+%r
 bool(true)
 bool(true)
 
-%rDeprecated: php74_php8_comparison_shim.mode: Non-strict comparison between "42" and "42foo" using == in .+ on line \d+%r
+%rDeprecated: php74_php8_comparison_shim: Non-strict comparison between "42" and "42foo" using == in .+ on line \d+%r
 bool(true)

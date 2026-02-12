@@ -28,7 +28,7 @@ check_case(42, "42foo");
 --EXPECTF--
 ok: bool(true)
 ok: bool(true)
-error: php74_php8_comparison_shim.mode: Non-strict comparison between "0" and "foo" using ==
-error: php74_php8_comparison_shim.mode: Non-strict comparison between "0" and "" using ==
+error: php74_php8_comparison_shim: Non-strict comparison between "0" and "foo" using ==
+error: php74_php8_comparison_shim: Non-strict comparison between "0" and "" using ==
 ok: bool(true)
-error: php74_php8_comparison_shim.mode: Non-strict comparison between "42" and "42foo" using ==
+error: php74_php8_comparison_shim: Non-strict comparison between "42" and "42foo" using ==
