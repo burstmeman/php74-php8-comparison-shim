@@ -66,7 +66,7 @@ static void p748_cmps_report_emit_entry(const p748_cmps_report_entry *entry)
 
     if (entry->count > 1) {
         zend_error(E_DEPRECATED,
-            "php74_php8_comparison_shim.mode: Non-strict comparison between "
+            "php74_php8_comparison_shim: Non-strict comparison between "
             "\"%s\" and \"%s\" using %s (repeated %ld times) in %s on line %ld",
             ZSTR_VAL(op1_str),
             ZSTR_VAL(op2_str),
@@ -76,7 +76,7 @@ static void p748_cmps_report_emit_entry(const p748_cmps_report_entry *entry)
             entry->lineno);
     } else {
         zend_error(E_DEPRECATED,
-            "php74_php8_comparison_shim.mode: Non-strict comparison between "
+            "php74_php8_comparison_shim: Non-strict comparison between "
             "\"%s\" and \"%s\" using %s in %s on line %ld",
             ZSTR_VAL(op1_str),
             ZSTR_VAL(op2_str),
@@ -371,7 +371,7 @@ static int p748_cmps_opcode_handler(zend_execute_data *execute_data)
                 zend_string *op2_str = zval_get_string(op2);
 
                 zend_throw_error(NULL,
-                    "php74_php8_comparison_shim.mode: Non-strict comparison between "
+                    "php74_php8_comparison_shim: Non-strict comparison between "
                     "\"%s\" and \"%s\" using %s",
                     ZSTR_VAL(op1_str),
                     ZSTR_VAL(op2_str),
@@ -393,7 +393,7 @@ static int p748_cmps_opcode_handler(zend_execute_data *execute_data)
                     zend_string *op2_str = zval_get_string(op2);
 
                     zend_error(E_DEPRECATED,
-                        "php74_php8_comparison_shim.mode: Non-strict comparison between "
+                        "php74_php8_comparison_shim: Non-strict comparison between "
                         "\"%s\" and \"%s\" using %s",
                         ZSTR_VAL(op1_str),
                         ZSTR_VAL(op2_str),
