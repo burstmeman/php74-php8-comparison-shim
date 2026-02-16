@@ -155,7 +155,7 @@ void p748_cmps_report_buffer_flush(void)
      * Check nTableMask for obvious corruption indicators (0 = never initialized,
      * 0xFFFFFFFF = likely corrupted). */
     if (ht->nTableMask == 0 || ht->nTableMask == (uint32_t)-1) {
-        zend_error(E_WARNING,
+        php_error_docref(NULL, E_WARNING,
             "php74_php8_comparison_shim: HashTable in invalid state during flush, "
             "skipping to prevent crash");
         PHP74_PHP8_CS_G(report_table_init) = 0;
@@ -167,7 +167,7 @@ void p748_cmps_report_buffer_flush(void)
     } ZEND_HASH_FOREACH_END();
 
     if (PHP74_PHP8_CS_G(report_overflowed)) {
-        zend_error(E_WARNING,
+        php_error_docref(NULL, E_WARNING,
             "php74_php8_comparison_shim.report_mode=defer: report buffer full, dropping further reports");
     }
 }
@@ -186,7 +186,7 @@ void p748_cmps_report_buffer_shutdown(void)
      * an invalid state (corrupted or never properly initialized despite flag),
      * skip destruction to avoid SIGSEGV. Better to leak memory than crash FPM. */
     if (ht->nTableMask == 0 || ht->nTableMask == (uint32_t)-1) {
-        zend_error(E_WARNING,
+        php_error_docref(NULL, E_WARNING,
             "php74_php8_comparison_shim: HashTable in invalid state during shutdown, "
             "skipping cleanup to prevent crash");
         PHP74_PHP8_CS_G(report_table_init) = 0;
@@ -216,7 +216,7 @@ void p748_cmps_report_enqueue(zend_uchar opcode, zval *op1, zval *op2)
     /* Why: Defensive validation before accessing HashTable operations.
      * If table is corrupted, disable the feature rather than crash. */
     if (table->nTableMask == 0 || table->nTableMask == (uint32_t)-1) {
-        zend_error(E_WARNING,
+        php_error_docref(NULL, E_WARNING,
             "php74_php8_comparison_shim: HashTable corrupted, disabling deferred reporting");
         PHP74_PHP8_CS_G(report_table_init) = 0;
         return;
