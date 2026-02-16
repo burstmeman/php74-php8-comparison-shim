@@ -222,14 +222,14 @@ Benchmark results (PHP 7.4.33, 1,000,000 iterations, 5 runs):
 
 | Case                               | Avg total (ms) | Avg comparisons (ms) | % diff vs baseline |
 |------------------------------------|----------------|----------------------|--------------------|
-| No extension (disabled)            | 156            | 149                  | 0.0%               |
-| Extension loaded: Off              | 155            | 148                  | -0.6%              |
-| Extension loaded: Report           | 703            | 697                  | +350.6%            |
-| Extension loaded: Report (sampling=5) | 274         | 268                  | +75.6%             |
-| Extension loaded: Simulate         | 209            | 203                  | +34.0%             |
-| Extension loaded: Simulate + Report | 702           | 696                  | +350.0%            |
-| Extension loaded: Error            | 844            | 837                  | +441.0%            |
-| Extension loaded: Report (defer)   | 323            | 316                  | +107.1%            |
+| No extension (disabled)            | 155            | 148                  | 0.0%               |
+| Extension loaded: Off              | 158            | 152                  | +1.9%              |
+| Extension loaded: Report           | 770            | 764                  | +396.8%            |
+| Extension loaded: Report (sampling=5) | 307         | 300                  | +98.1%             |
+| Extension loaded: Simulate         | 213            | 207                  | +37.4%             |
+| Extension loaded: Simulate + Report | 682           | 676                  | +340.0%            |
+| Extension loaded: Error            | 819            | 814                  | +428.4%            |
+| Extension loaded: Report (defer)   | 326            | 320                  | +110.3%            |
 
 ## Debugging with gdb
 

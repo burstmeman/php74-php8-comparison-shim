@@ -48,12 +48,20 @@ static void p748_cmps_report_entry_dtor(zval *zv)
 {
     p748_cmps_report_entry *entry = (p748_cmps_report_entry *)Z_PTR_P(zv);
 
+    /* Why: Defensive NULL check to prevent crash if HashTable contains invalid entries. */
     if (entry == NULL) {
         return;
     }
 
-    zval_ptr_dtor(&entry->op1);
-    zval_ptr_dtor(&entry->op2);
+    /* Why: Only free zvals if they appear to be valid (basic type check).
+     * This prevents crashes if entry was corrupted. */
+    if (Z_TYPE(entry->op1) != IS_UNDEF && Z_TYPE(entry->op1) < IS_CALLABLE) {
+        zval_ptr_dtor(&entry->op1);
+    }
+    if (Z_TYPE(entry->op2) != IS_UNDEF && Z_TYPE(entry->op2) < IS_CALLABLE) {
+        zval_ptr_dtor(&entry->op2);
+    }
+
     efree(entry);
 }
 
@@ -106,7 +114,19 @@ static void p748_cmps_report_key_init(smart_str *key, const char *filename, size
 
 void p748_cmps_report_buffer_init(void)
 {
+    HashTable *ht;
+
     PHP74_PHP8_CS_G(report_overflowed) = 0;
+
+    /* Why: Defensive check - if already initialized, clean up first to prevent
+     * double-initialization which could leak memory or corrupt state. */
+    if (PHP74_PHP8_CS_G(report_table_init)) {
+        ht = &PHP74_PHP8_CS_G(report_table);
+        if (ht->nTableMask != 0 && ht->nTableMask != (uint32_t)-1) {
+            zend_hash_destroy(ht);
+        }
+    }
+
     PHP74_PHP8_CS_G(report_table_init) = 0;
 
     if (!p748_cmps_report_mode_defer(PHP74_PHP8_CS_G(report_mode))) {
@@ -123,12 +143,26 @@ void p748_cmps_report_buffer_init(void)
 void p748_cmps_report_buffer_flush(void)
 {
     p748_cmps_report_entry *entry;
+    HashTable *ht;
 
     if (!PHP74_PHP8_CS_G(report_table_init)) {
         return;
     }
 
-    ZEND_HASH_FOREACH_PTR(&PHP74_PHP8_CS_G(report_table), entry) {
+    ht = &PHP74_PHP8_CS_G(report_table);
+
+    /* Why: Defensive check to prevent crash if HashTable is in invalid state.
+     * Check nTableMask for obvious corruption indicators (0 = never initialized,
+     * 0xFFFFFFFF = likely corrupted). */
+    if (ht->nTableMask == 0 || ht->nTableMask == (uint32_t)-1) {
+        zend_error(E_WARNING,
+            "php74_php8_comparison_shim: HashTable in invalid state during flush, "
+            "skipping to prevent crash");
+        PHP74_PHP8_CS_G(report_table_init) = 0;
+        return;
+    }
+
+    ZEND_HASH_FOREACH_PTR(ht, entry) {
         p748_cmps_report_emit_entry(entry);
     } ZEND_HASH_FOREACH_END();
 
@@ -140,11 +174,26 @@ void p748_cmps_report_buffer_flush(void)
 
 void p748_cmps_report_buffer_shutdown(void)
 {
+    HashTable *ht;
+
     if (!PHP74_PHP8_CS_G(report_table_init)) {
         return;
     }
 
-    zend_hash_destroy(&PHP74_PHP8_CS_G(report_table));
+    ht = &PHP74_PHP8_CS_G(report_table);
+
+    /* Why: Defensive check to prevent crash during cleanup. If HashTable is in
+     * an invalid state (corrupted or never properly initialized despite flag),
+     * skip destruction to avoid SIGSEGV. Better to leak memory than crash FPM. */
+    if (ht->nTableMask == 0 || ht->nTableMask == (uint32_t)-1) {
+        zend_error(E_WARNING,
+            "php74_php8_comparison_shim: HashTable in invalid state during shutdown, "
+            "skipping cleanup to prevent crash");
+        PHP74_PHP8_CS_G(report_table_init) = 0;
+        return;
+    }
+
+    zend_hash_destroy(ht);
     PHP74_PHP8_CS_G(report_table_init) = 0;
 }
 
@@ -163,6 +212,15 @@ void p748_cmps_report_enqueue(zend_uchar opcode, zval *op1, zval *op2)
     }
 
     table = &PHP74_PHP8_CS_G(report_table);
+
+    /* Why: Defensive validation before accessing HashTable operations.
+     * If table is corrupted, disable the feature rather than crash. */
+    if (table->nTableMask == 0 || table->nTableMask == (uint32_t)-1) {
+        zend_error(E_WARNING,
+            "php74_php8_comparison_shim: HashTable corrupted, disabling deferred reporting");
+        PHP74_PHP8_CS_G(report_table_init) = 0;
+        return;
+    }
     filename_cstr = zend_get_executed_filename();
     lineno = zend_get_executed_lineno();
     filename_len = filename_cstr != NULL ? strlen(filename_cstr) : 0;
