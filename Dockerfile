@@ -19,10 +19,18 @@ RUN true
 WORKDIR /ext
 COPY . /ext
 
+ENV PHP_CFLAGS="-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64"
+ENV PHP_CPPFLAGS="$PHP_CFLAGS"
+ENV PHP_LDFLAGS="-Wl,-O1 -Wl,--hash-style=gnu -pie"
+
 RUN phpize \
-    &&./configure \
-        --enable-php74-php8-comparison-shim \
-        --enable-php74-php8-comparison-shim-risky \
+    && \
+        CFLAGS="$PHP_CFLAGS" \
+        CPPFLAGS="$PHP_CPPFLAGS" \
+        LDFLAGS="$PHP_LDFLAGS" \
+        ./configure \
+            --enable-php74-php8-comparison-shim \
+            --enable-php74-php8-comparison-shim-risky \
     && make -j$(nproc) \
     && make install
 

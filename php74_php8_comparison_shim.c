@@ -113,6 +113,13 @@ static void p748_cmps_init_globals(void *globals)
     cmps_globals->report_limit = 128;
     cmps_globals->report_overflowed = 0;
     cmps_globals->report_table_init = 0;
+    
+    /* Why: Initialize HashTable structure to prevent SIGSEGV in PHP-FPM.
+     * The report_table is a complex structure that must be zeroed out even when
+     * not active (report_table_init = 0). Without this, accessing the HashTable
+     * in PHP-FPM can crash due to garbage memory, especially since FPM processes
+     * persist across requests. */
+    memset(&cmps_globals->report_table, 0, sizeof(HashTable));
 }
 
 static PHP_MINIT_FUNCTION(php74_php8_comparison_shim)
