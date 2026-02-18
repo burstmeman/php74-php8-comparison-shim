@@ -75,6 +75,14 @@ Runtime API:
 - `php74_php8_cmps_set_sampling(int $sampling_factor): bool` - change the sampling factor during runtime.
   Returns `false` when the current mode forces sampling off; otherwise updates the factor and
   resets the internal counter.
+- `php74_php8_cmps_flush_deferred(): bool` - flush the deferred report buffer and emit
+  buffered deprecations via `E_DEPRECATED`. Returns `true` if any reports were emitted,
+  `false` if the extension is in sync mode, the buffer is empty, or it was already flushed.
+
+  **Important:** In defer report mode (`report_mode=defer`) the extension does **not**
+  flush automatically. You must call this function explicitly (e.g. at the end of your
+  script or inside a `register_shutdown_function()` callback) to emit the buffered
+  deprecations. If not called, deferred entries are silently discarded at request end.
 
 ## Install
 
