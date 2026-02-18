@@ -19,4 +19,4 @@ bool(true)
 
 %rDeprecated: php74_php8_comparison_shim: Non-strict comparison between "0" and "foo" using == in .+ on line \d+%r
 
-Warning: php74_php8_comparison_shim.report_mode=defer: report buffer full, dropping further reports in Unknown on line 0
+Warning: Unknown: php74_php8_comparison_shim.report_mode=defer: report buffer full, dropping further reports in Unknown on line 0
