@@ -14,9 +14,14 @@ typedef struct {
 static int p748_cmps_opcode_handler(zend_execute_data *execute_data);
 static const char *p748_cmps_opcode_to_operator(zend_uchar opcode);
 
+/* Why: Store zend_string* only, not zvals. Storing zvals (ZVAL_COPY) keeps
+ * references to refcounted request data; if PHP tears down the request before
+ * or during our RSHUTDOWN, flush/dtor touch freed memory → zend_mm_heap corrupted.
+ * We take the string form in the opcode handler (when operands are valid) and
+ * own those refs until dtor. */
 typedef struct {
-    zval op1;
-    zval op2;
+    zend_string *op1_str;
+    zend_string *op2_str;
     zend_uchar opcode;
     const char *filename;
     zend_long lineno;
@@ -53,13 +58,17 @@ static void p748_cmps_report_entry_dtor(zval *zv)
         return;
     }
 
-    /* Why: Only free zvals if they appear to be valid (basic type check).
-     * This prevents crashes if entry was corrupted. */
-    if (Z_TYPE(entry->op1) != IS_UNDEF && Z_TYPE(entry->op1) < IS_CALLABLE) {
-        zval_ptr_dtor(&entry->op1);
+    if (entry->op1_str != NULL) {
+        zend_string_release(entry->op1_str);
+        entry->op1_str = NULL;
     }
-    if (Z_TYPE(entry->op2) != IS_UNDEF && Z_TYPE(entry->op2) < IS_CALLABLE) {
-        zval_ptr_dtor(&entry->op2);
+    if (entry->op2_str != NULL) {
+        zend_string_release(entry->op2_str);
+        entry->op2_str = NULL;
+    }
+    if (entry->filename != NULL) {
+        efree((void *)entry->filename);
+        entry->filename = NULL;
     }
 
     efree(entry);
@@ -69,32 +78,20 @@ static void p748_cmps_report_emit_entry(const p748_cmps_report_entry *entry)
 {
     const char *op = p748_cmps_opcode_to_operator(entry->opcode);
     const char *filename = entry->filename ? entry->filename : "Unknown";
-    zend_string *op1_str = zval_get_string((zval *)&entry->op1);
-    zend_string *op2_str = zval_get_string((zval *)&entry->op2);
+    const char *s1 = entry->op1_str ? ZSTR_VAL(entry->op1_str) : "?";
+    const char *s2 = entry->op2_str ? ZSTR_VAL(entry->op2_str) : "?";
 
     if (entry->count > 1) {
         zend_error(E_DEPRECATED,
             "php74_php8_comparison_shim: Non-strict comparison between "
             "\"%s\" and \"%s\" using %s (repeated %ld times) in %s on line %ld",
-            ZSTR_VAL(op1_str),
-            ZSTR_VAL(op2_str),
-            op,
-            entry->count,
-            filename,
-            entry->lineno);
+            s1, s2, op, entry->count, filename, entry->lineno);
     } else {
         zend_error(E_DEPRECATED,
             "php74_php8_comparison_shim: Non-strict comparison between "
             "\"%s\" and \"%s\" using %s in %s on line %ld",
-            ZSTR_VAL(op1_str),
-            ZSTR_VAL(op2_str),
-            op,
-            filename,
-            entry->lineno);
+            s1, s2, op, filename, entry->lineno);
     }
-
-    zend_string_release(op1_str);
-    zend_string_release(op2_str);
 }
 
 static void p748_cmps_report_key_init(smart_str *key, const char *filename, size_t filename_len, zend_long lineno)
@@ -247,11 +244,16 @@ void p748_cmps_report_enqueue(zend_uchar opcode, zval *op1, zval *op2)
         return;
     }
 
+    /* Why: Store string form only (we take ownership). Do not store zvals:
+     * they reference request-lifecycle data that may be freed before RSHUTDOWN,
+     * causing use-after-free / double-free and zend_mm_heap corrupted. */
     entry = (p748_cmps_report_entry *)emalloc(sizeof(*entry));
-    ZVAL_COPY(&entry->op1, op1);
-    ZVAL_COPY(&entry->op2, op2);
+    entry->op1_str = zval_get_string(op1);
+    entry->op2_str = zval_get_string(op2);
     entry->opcode = opcode;
-    entry->filename = filename_cstr;
+    entry->filename = (filename_cstr != NULL && filename_len > 0)
+        ? (const char *)estrndup(filename_cstr, filename_len)
+        : NULL;
     entry->lineno = lineno;
     entry->count = 1;
 
