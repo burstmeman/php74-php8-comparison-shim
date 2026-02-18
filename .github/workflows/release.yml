@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g. 0.3.2)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Validate version format
+        run: |
+          if ! echo "${{ inputs.version }}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Version must be in semver format (e.g. 1.2.3)"
+            exit 1
+          fi
+
+      - name: Update version in header
+        run: |
+          sed -i 's/#define PHP_PHP74_PHP8_COMPARISON_SHIM_VERSION ".*"/#define PHP_PHP74_PHP8_COMPARISON_SHIM_VERSION "${{ inputs.version }}"/' php74_php8_comparison_shim.h
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add php74_php8_comparison_shim.h
+          git diff --cached --quiet && echo "Version already matches, skipping commit" || {
+            git commit -m "chore: bump version to ${{ inputs.version }}"
+            git push origin main
+          }
+
+      - name: Create tag and release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git tag "v${{ inputs.version }}"
+          git push origin "v${{ inputs.version }}"
+          gh release create "v${{ inputs.version }}" \
+            --title "v${{ inputs.version }}" \
+            --generate-notes
