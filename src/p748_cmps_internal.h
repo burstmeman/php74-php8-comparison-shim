@@ -49,6 +49,9 @@ void p748_cmps_report_buffer_init(void);
 void p748_cmps_report_buffer_flush(void);
 void p748_cmps_report_buffer_shutdown(void);
 void p748_cmps_report_enqueue(zend_uchar opcode, zval *op1, zval *op2);
+const char *p748_cmps_opcode_to_operator(zend_uchar opcode);
+int p748_cmps_simulate_php8_result(zend_execute_data *execute_data,
+    const zend_op *opline, zval *op1, zval *op2);
 
 /* Inline helpers used by multiple compilation units.
  * Note: Using 'static' instead of 'static inline' for C89 compatibility.
