@@ -53,7 +53,6 @@ static void p748_cmps_report_entry_dtor(zval *zv)
 {
     p748_cmps_report_entry *entry = (p748_cmps_report_entry *)Z_PTR_P(zv);
 
-    /* Why: Defensive NULL check to prevent crash if HashTable contains invalid entries. */
     if (entry == NULL) {
         return;
     }
@@ -133,6 +132,9 @@ void p748_cmps_report_buffer_init(void)
         return;
     }
 
+    /* Why: Ensure a clean struct before init (e.g. after previous request's
+     * shutdown or if shutdown was skipped). Avoids reusing stale pointers. */
+    memset(&PHP74_PHP8_CS_G(report_table), 0, sizeof(HashTable));
     zend_hash_init(&PHP74_PHP8_CS_G(report_table), 8, NULL, p748_cmps_report_entry_dtor, 0);
     PHP74_PHP8_CS_G(report_table_init) = 1;
 }
@@ -191,6 +193,10 @@ void p748_cmps_report_buffer_shutdown(void)
     }
 
     zend_hash_destroy(ht);
+    /* Why: Zero the struct so the next request's RINIT never reuses stale
+     * HashTable internals (arData, etc.). Prevents zend_mm_heap corrupted
+     * on the second request after a heavy first request in FPM. */
+    memset(ht, 0, sizeof(HashTable));
     PHP74_PHP8_CS_G(report_table_init) = 0;
 }
 
