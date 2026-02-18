@@ -13,7 +13,7 @@ PHP_ARG_ENABLE([php74_php8_comparison_shim_risky],
 
 if test "$PHP_PHP74_PHP8_COMPARISON_SHIM" = "yes"; then
   PHP_NEW_EXTENSION(php74_php8_comparison_shim,
-    php74_php8_comparison_shim.c src/p748_cmps_modes.c src/p748_cmps_handlers.c,
+    php74_php8_comparison_shim.c src/p748_cmps_modes.c src/p748_cmps_handlers.c src/p748_cmps_report.c src/p748_cmps_simulate.c,
     $ext_shared)
   if test "$PHP_PHP74_PHP8_COMPARISON_SHIM_RISKY" = "yes"; then
     AC_DEFINE(PHP74_PHP8_COMPARISON_SHIM_RISKY, 1, [Enable risky modes])
