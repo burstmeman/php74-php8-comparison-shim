@@ -480,7 +480,13 @@ static int p748_cmps_opcode_handler(zend_execute_data *execute_data)
     }
 
 cleanup:
-    p748_cmps_release_free_ops(free_op1, free_op2);
+    /* Why: Only free operands when WE handle the opcode (CONTINUE). When we
+     * return DISPATCH, the VM re-executes the standard handler which fetches
+     * and frees the same TMP/VAR operands. Freeing here + DISPATCH = double-free
+     * → zend_mm_heap corrupted. */
+    if (opcode_result != ZEND_USER_OPCODE_DISPATCH) {
+        p748_cmps_release_free_ops(free_op1, free_op2);
+    }
 
     if (advance_opline) {
         /*
