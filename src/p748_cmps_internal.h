@@ -18,6 +18,8 @@ ZEND_BEGIN_MODULE_GLOBALS(php74_php8_comparison_shim)
     zend_long report_limit;
     zend_bool report_overflowed;
     zend_bool report_table_init;
+    zend_bool in_handler;
+    zend_bool report_flushed;
     HashTable report_table;
 ZEND_END_MODULE_GLOBALS(php74_php8_comparison_shim)
 
@@ -46,7 +48,7 @@ void p748_cmps_disable_handlers(void);
 const char *p748_cmps_mode_to_string(zend_long mode);
 const char *p748_cmps_report_mode_to_string(zend_long mode);
 void p748_cmps_report_buffer_init(void);
-void p748_cmps_report_buffer_flush(void);
+zend_bool p748_cmps_report_buffer_flush(void);
 void p748_cmps_report_buffer_shutdown(void);
 void p748_cmps_report_enqueue(zend_uchar opcode, zval *op1, zval *op2);
 const char *p748_cmps_opcode_to_operator(zend_uchar opcode);

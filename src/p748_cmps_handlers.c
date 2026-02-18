@@ -102,7 +102,7 @@ void p748_cmps_apply_mode(void)
 
 static int p748_cmps_opcode_handler(zend_execute_data *execute_data)
 {
-    const zend_op *opline = execute_data->opline;
+    const zend_op *opline;
     zend_free_op free_op1 = NULL;
     zend_free_op free_op2 = NULL;
     zval *op1;
@@ -112,9 +112,19 @@ static int p748_cmps_opcode_handler(zend_execute_data *execute_data)
     int opcode_result = ZEND_USER_OPCODE_DISPATCH;
     int advance_opline = 0;
 
+    if (execute_data == NULL || execute_data->opline == NULL) {
+        return ZEND_USER_OPCODE_DISPATCH;
+    }
+
+    opline = execute_data->opline;
+
     mode = PHP74_PHP8_CS_G(mode);
 
     if (mode == P748_CMPS_MODE_OFF) {
+        return ZEND_USER_OPCODE_DISPATCH;
+    }
+
+    if (PHP74_PHP8_CS_G(in_handler)) {
         return ZEND_USER_OPCODE_DISPATCH;
     }
 
@@ -147,12 +157,14 @@ static int p748_cmps_opcode_handler(zend_execute_data *execute_data)
                 zend_string *op1_str = zval_get_string(op1);
                 zend_string *op2_str = zval_get_string(op2);
 
+                PHP74_PHP8_CS_G(in_handler) = 1;
                 zend_throw_error(NULL,
                     "php74_php8_comparison_shim: Non-strict comparison between "
                     "\"%s\" and \"%s\" using %s",
                     ZSTR_VAL(op1_str),
                     ZSTR_VAL(op2_str),
                     op);
+                PHP74_PHP8_CS_G(in_handler) = 0;
 
                 zend_string_release(op1_str);
                 zend_string_release(op2_str);
@@ -169,15 +181,22 @@ static int p748_cmps_opcode_handler(zend_execute_data *execute_data)
                     zend_string *op1_str = zval_get_string(op1);
                     zend_string *op2_str = zval_get_string(op2);
 
+                    PHP74_PHP8_CS_G(in_handler) = 1;
                     zend_error(E_DEPRECATED,
                         "php74_php8_comparison_shim: Non-strict comparison between "
                         "\"%s\" and \"%s\" using %s",
                         ZSTR_VAL(op1_str),
                         ZSTR_VAL(op2_str),
                         op);
+                    PHP74_PHP8_CS_G(in_handler) = 0;
 
                     zend_string_release(op1_str);
                     zend_string_release(op2_str);
+
+                    if (EG(exception)) {
+                        p748_cmps_release_free_ops(free_op1, free_op2);
+                        return ZEND_USER_OPCODE_CONTINUE;
+                    }
                 }
             }
         }

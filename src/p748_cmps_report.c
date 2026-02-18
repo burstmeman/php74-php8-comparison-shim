@@ -82,6 +82,7 @@ void p748_cmps_report_buffer_init(void)
     HashTable *ht;
 
     PHP74_PHP8_CS_G(report_overflowed) = 0;
+    PHP74_PHP8_CS_G(report_flushed) = 0;
 
     /* Why: Defensive check - if already initialized, clean up first to prevent
      * double-initialization which could leak memory or corrupt state. */
@@ -108,13 +109,18 @@ void p748_cmps_report_buffer_init(void)
     PHP74_PHP8_CS_G(report_table_init) = 1;
 }
 
-void p748_cmps_report_buffer_flush(void)
+zend_bool p748_cmps_report_buffer_flush(void)
 {
     p748_cmps_report_entry *entry;
     HashTable *ht;
+    zend_bool had_entries;
+
+    if (PHP74_PHP8_CS_G(report_flushed)) {
+        return 0;
+    }
 
     if (!PHP74_PHP8_CS_G(report_table_init)) {
-        return;
+        return 0;
     }
 
     ht = &PHP74_PHP8_CS_G(report_table);
@@ -127,8 +133,16 @@ void p748_cmps_report_buffer_flush(void)
             "php74_php8_comparison_shim: HashTable in invalid state during flush, "
             "skipping to prevent crash");
         PHP74_PHP8_CS_G(report_table_init) = 0;
-        return;
+        PHP74_PHP8_CS_G(report_flushed) = 1;
+        return 0;
     }
+
+    had_entries = zend_hash_num_elements(ht) > 0;
+
+    /* Why: Prevent reentrancy during flush. User error handlers triggered by
+     * zend_error() might perform comparisons, which would enter the opcode
+     * handler and try to enqueue new entries while we iterate the HashTable. */
+    PHP74_PHP8_CS_G(in_handler) = 1;
 
     ZEND_HASH_FOREACH_PTR(ht, entry) {
         p748_cmps_report_emit_entry(entry);
@@ -138,6 +152,11 @@ void p748_cmps_report_buffer_flush(void)
         php_error_docref(NULL, E_WARNING,
             "php74_php8_comparison_shim.report_mode=defer: report buffer full, dropping further reports");
     }
+
+    PHP74_PHP8_CS_G(in_handler) = 0;
+    PHP74_PHP8_CS_G(report_flushed) = 1;
+
+    return had_entries;
 }
 
 void p748_cmps_report_buffer_shutdown(void)

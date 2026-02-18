@@ -12,6 +12,7 @@ error_reporting=E_ALL
 $a = 0;
 var_dump($a == "foo");
 var_dump($a == "bar");
+php74_php8_cmps_flush_deferred();
 ?>
 --EXPECTF--
 bool(true)
@@ -19,4 +20,4 @@ bool(true)
 
 %rDeprecated: php74_php8_comparison_shim: Non-strict comparison between "0" and "foo" using == in .+ on line \d+%r
 
-Warning: Unknown: php74_php8_comparison_shim.report_mode=defer: report buffer full, dropping further reports in Unknown on line 0
+%rWarning: .+php74_php8_comparison_shim.report_mode=defer: report buffer full, dropping further reports in .+ on line \d+%r

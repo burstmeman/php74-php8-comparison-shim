@@ -11,11 +11,12 @@ error_reporting=E_ALL
 $a = 0;
 var_dump($a == "foo");
 var_dump($a == "foo");
+php74_php8_cmps_flush_deferred();
 ?>
 --EXPECTF--
 bool(true)
 bool(true)
 
-%rDeprecated: php74_php8_comparison_shim: Non-strict comparison between "0" and "foo" using == in .+ on line \d+ in Unknown on line 0%r
+%rDeprecated: php74_php8_comparison_shim: Non-strict comparison between "0" and "foo" using == in .+ on line \d+%r
 
-%rDeprecated: php74_php8_comparison_shim: Non-strict comparison between "0" and "foo" using == in .+ on line \d+ in Unknown on line 0%r
+%rDeprecated: php74_php8_comparison_shim: Non-strict comparison between "0" and "foo" using == in .+ on line \d+%r
