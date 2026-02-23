@@ -21,6 +21,8 @@ ZEND_BEGIN_MODULE_GLOBALS(php74_php8_comparison_shim)
     zend_bool in_handler;
     zend_bool report_flushed;
     HashTable report_table;
+    HashTable ignored_locations;
+    zend_bool ignored_locations_init;
 ZEND_END_MODULE_GLOBALS(php74_php8_comparison_shim)
 
 ZEND_EXTERN_MODULE_GLOBALS(php74_php8_comparison_shim)
@@ -51,6 +53,11 @@ void p748_cmps_report_buffer_init(void);
 zend_bool p748_cmps_report_buffer_flush(void);
 void p748_cmps_report_buffer_shutdown(void);
 void p748_cmps_report_enqueue(zend_uchar opcode, zval *op1, zval *op2);
+void p748_cmps_ignored_locations_init(void);
+void p748_cmps_ignored_locations_shutdown(void);
+int p748_cmps_location_is_ignored(const char *filename, zend_long lineno);
+
+extern const zend_function_entry php74_php8_comparison_shim_functions[];
 const char *p748_cmps_opcode_to_operator(zend_uchar opcode);
 int p748_cmps_simulate_php8_result(zend_execute_data *execute_data,
     const zend_op *opline, zval *op1, zval *op2);

@@ -10,50 +10,6 @@
 
 ZEND_DECLARE_MODULE_GLOBALS(php74_php8_comparison_shim)
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_php74_php8_cmps_set_sampling, 0, 1, _IS_BOOL, 0)
-    ZEND_ARG_TYPE_INFO(0, sampling_factor, IS_LONG, 0)
-ZEND_END_ARG_INFO()
-
-PHP_FUNCTION(php74_php8_cmps_set_sampling)
-{
-    zend_long factor;
-
-    ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_LONG(factor)
-    ZEND_PARSE_PARAMETERS_END();
-
-    if (factor < 0) {
-        factor = 0;
-    }
-
-    if (p748_cmps_mode_forces_sampling_off(PHP74_PHP8_CS_G(mode))) {
-        p748_cmps_disable_sampling();
-        RETURN_FALSE;
-    }
-
-    PHP74_PHP8_CS_G(sampling_factor) = factor;
-    PHP74_PHP8_CS_G(sample_counter) = 0;
-    RETURN_TRUE;
-}
-
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_php74_php8_cmps_flush_deferred, 0, 0, _IS_BOOL, 0)
-ZEND_END_ARG_INFO()
-
-PHP_FUNCTION(php74_php8_cmps_flush_deferred)
-{
-    ZEND_PARSE_PARAMETERS_NONE();
-    if (p748_cmps_report_buffer_flush()) {
-        RETURN_TRUE;
-    }
-    RETURN_FALSE;
-}
-
-static const zend_function_entry php74_php8_comparison_shim_functions[] = {
-    PHP_FE(php74_php8_cmps_set_sampling, arginfo_php74_php8_cmps_set_sampling)
-    PHP_FE(php74_php8_cmps_flush_deferred, arginfo_php74_php8_cmps_flush_deferred)
-    PHP_FE_END
-};
-
 static ZEND_INI_MH(p748_cmps_update_mode)
 {
     if (stage == PHP_INI_STAGE_RUNTIME || stage == PHP_INI_STAGE_HTACCESS) {
@@ -135,6 +91,7 @@ static void p748_cmps_init_globals(void *globals)
      * in PHP-FPM can crash due to garbage memory, especially since FPM processes
      * persist across requests. */
     memset(&cmps_globals->report_table, 0, sizeof(HashTable));
+    memset(&cmps_globals->ignored_locations, 0, sizeof(HashTable));
 }
 
 static PHP_MINIT_FUNCTION(php74_php8_comparison_shim)
@@ -168,12 +125,14 @@ static PHP_RINIT_FUNCTION(php74_php8_comparison_shim)
     PHP74_PHP8_CS_G(in_handler) = 0;
     PHP74_PHP8_CS_G(report_flushed) = 0;
     p748_cmps_report_buffer_init();
+    p748_cmps_ignored_locations_init();
     return SUCCESS;
 }
 
 static PHP_RSHUTDOWN_FUNCTION(php74_php8_comparison_shim)
 {
     p748_cmps_report_buffer_shutdown();
+    p748_cmps_ignored_locations_shutdown();
     return SUCCESS;
 }
 
