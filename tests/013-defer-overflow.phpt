@@ -18,6 +18,6 @@ php74_php8_cmps_flush_deferred();
 bool(true)
 bool(true)
 
-%rDeprecated: php74_php8_comparison_shim: Non-strict comparison between "0" and "foo" using == in .+ on line \d+%r
+%rDeprecated: php74_php8_comparison_shim: Non-strict comparison between "0" and "foo" using == \(repeated 1 times\) in .+ on line \d+%r
 
 %rWarning: .+php74_php8_comparison_shim.report_mode=defer: report buffer full, dropping further reports in .+ on line \d+%r

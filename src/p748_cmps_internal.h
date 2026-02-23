@@ -53,6 +53,7 @@ void p748_cmps_report_buffer_init(void);
 zend_bool p748_cmps_report_buffer_flush(void);
 void p748_cmps_report_buffer_shutdown(void);
 void p748_cmps_report_enqueue(zend_uchar opcode, zval *op1, zval *op2);
+void p748_cmps_report_get_deferred(zval *return_value);
 void p748_cmps_ignored_locations_init(void);
 void p748_cmps_ignored_locations_shutdown(void);
 int p748_cmps_location_is_ignored(const char *filename, zend_long lineno);
