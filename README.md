@@ -2,10 +2,6 @@
 
 Detects PHP 8.0 string-to-number comparison behavior changes while running on PHP 7.4.33.
 
-**Features:** INI-based configuration, multiple modes (report/error/simulate), deferred
-reporting for PHP-FPM, and a [Runtime API](#runtime-api) for sampling, flushing, fetching
-reports, and ignoring locations.
-
 ## What it does
 
 PHP 8 changed non-strict comparisons between numbers and non-numeric strings. This extension
