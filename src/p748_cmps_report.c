@@ -49,17 +49,10 @@ static void p748_cmps_report_emit_entry(const p748_cmps_report_entry *entry)
     const char *s1 = entry->op1_str ? ZSTR_VAL(entry->op1_str) : "?";
     const char *s2 = entry->op2_str ? ZSTR_VAL(entry->op2_str) : "?";
 
-    if (entry->count > 1) {
-        zend_error(E_DEPRECATED,
-            "php74_php8_comparison_shim: Non-strict comparison between "
-            "\"%s\" and \"%s\" using %s (repeated %ld times) in %s on line %ld",
-            s1, s2, op, entry->count, filename, entry->lineno);
-    } else {
-        zend_error(E_DEPRECATED,
-            "php74_php8_comparison_shim: Non-strict comparison between "
-            "\"%s\" and \"%s\" using %s in %s on line %ld",
-            s1, s2, op, filename, entry->lineno);
-    }
+    zend_error_at(E_DEPRECATED, filename, (uint32_t)entry->lineno,
+        "php74_php8_comparison_shim: Non-strict comparison between "
+        "\"%s\" and \"%s\" using %s (repeated %ld times)",
+        s1, s2, op, entry->count);
 }
 
 static void p748_cmps_report_key_init(smart_str *key, const char *filename, size_t filename_len, zend_long lineno)
@@ -252,4 +245,46 @@ void p748_cmps_report_enqueue(zend_uchar opcode, zval *op1, zval *op2)
 
     zend_hash_add_ptr(table, key_str, entry);
     zend_string_release(key_str);
+}
+
+void p748_cmps_report_get_deferred(zval *return_value)
+{
+    p748_cmps_report_entry *entry;
+    HashTable *ht;
+    zval row;
+    const char *filename;
+    const char *op;
+    const char *s1;
+    const char *s2;
+
+    array_init(return_value);
+
+    if (!p748_cmps_report_mode_defer(PHP74_PHP8_CS_G(report_mode))) {
+        return;
+    }
+    if (!PHP74_PHP8_CS_G(report_table_init)) {
+        return;
+    }
+
+    ht = &PHP74_PHP8_CS_G(report_table);
+    if (ht->nTableMask == 0 || ht->nTableMask == (uint32_t)-1) {
+        return;
+    }
+
+    ZEND_HASH_FOREACH_PTR(ht, entry) {
+        array_init(&row);
+        filename = entry->filename ? entry->filename : "Unknown";
+        op = p748_cmps_opcode_to_operator(entry->opcode);
+        s1 = entry->op1_str ? ZSTR_VAL(entry->op1_str) : "?";
+        s2 = entry->op2_str ? ZSTR_VAL(entry->op2_str) : "?";
+
+        add_assoc_string(&row, "filename", filename);
+        add_assoc_long(&row, "line", entry->lineno);
+        add_assoc_long(&row, "entry_count", entry->count);
+        add_assoc_string(&row, "operator", op);
+        add_assoc_string(&row, "left_op", s1);
+        add_assoc_string(&row, "right_op", s2);
+
+        add_next_index_zval(return_value, &row);
+    } ZEND_HASH_FOREACH_END();
 }

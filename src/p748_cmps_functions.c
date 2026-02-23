@@ -139,6 +139,15 @@ PHP_FUNCTION(php74_php8_cmps_flush_deferred)
     RETURN_BOOL(p748_cmps_report_buffer_flush());
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_php74_php8_cmps_get_deferred_reports, 0, 0, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
+PHP_FUNCTION(php74_php8_cmps_get_deferred_reports)
+{
+    ZEND_PARSE_PARAMETERS_NONE();
+    p748_cmps_report_get_deferred(return_value);
+}
+
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_php74_php8_cmps_set_ignored_locations, 0, 1, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO(0, locations, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
@@ -157,6 +166,7 @@ PHP_FUNCTION(php74_php8_cmps_set_ignored_locations)
 const zend_function_entry php74_php8_comparison_shim_functions[] = {
     PHP_FE(php74_php8_cmps_set_sampling, arginfo_php74_php8_cmps_set_sampling)
     PHP_FE(php74_php8_cmps_flush_deferred, arginfo_php74_php8_cmps_flush_deferred)
+    PHP_FE(php74_php8_cmps_get_deferred_reports, arginfo_php74_php8_cmps_get_deferred_reports)
     PHP_FE(php74_php8_cmps_set_ignored_locations, arginfo_php74_php8_cmps_set_ignored_locations)
     PHP_FE_END
 };
