@@ -128,6 +128,10 @@ static int p748_cmps_opcode_handler(zend_execute_data *execute_data)
         return ZEND_USER_OPCODE_DISPATCH;
     }
 
+    if (p748_cmps_location_is_ignored(zend_get_executed_filename(), zend_get_executed_lineno())) {
+        return ZEND_USER_OPCODE_DISPATCH;
+    }
+
     op1 = zend_get_zval_ptr(opline, opline->op1_type, &opline->op1,
         execute_data, &free_op1, BP_VAR_R);
     op2 = zend_get_zval_ptr(opline, opline->op2_type, &opline->op2,
