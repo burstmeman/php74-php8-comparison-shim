@@ -2,6 +2,10 @@
 
 Detects PHP 8.0 string-to-number comparison behavior changes while running on PHP 7.4.33.
 
+**Features:** INI-based configuration, multiple modes (report/error/simulate), deferred
+reporting for PHP-FPM, and a [Runtime API](#runtime-api) for sampling, flushing, fetching
+reports, and ignoring locations.
+
 ## What it does
 
 PHP 8 changed non-strict comparisons between numbers and non-numeric strings. This extension
@@ -25,6 +29,9 @@ Behavior change examples:
 | `42 == "42foo"` | true    | false   |
 
 ## Configuration
+
+INI settings control startup behavior. For runtime control (sampling, deferred reports,
+ignored locations), see [Runtime API](#runtime-api).
 
 Enable the extension and set the mode:
 
@@ -70,19 +77,74 @@ Report buffer limit:
 - `php74_php8_comparison_shim.report_limit=128` (default) - max number of buffered entries
 - `0` - unlimited
 
-Runtime API:
+## Runtime API
 
-- `php74_php8_cmps_set_sampling(int $sampling_factor): bool` - change the sampling factor during runtime.
-  Returns `false` when the current mode forces sampling off; otherwise updates the factor and
-  resets the internal counter.
-- `php74_php8_cmps_flush_deferred(): bool` - flush the deferred report buffer and emit
-  buffered deprecations via `E_DEPRECATED`. Returns `true` if any reports were emitted,
-  `false` if the extension is in sync mode, the buffer is empty, or it was already flushed.
+The extension provides PHP functions for runtime control. All functions are available when
+the extension is loaded.
 
-  **Important:** In defer report mode (`report_mode=defer`) the extension does **not**
-  flush automatically. You must call this function explicitly (e.g. at the end of your
-  script or inside a `register_shutdown_function()` callback) to emit the buffered
-  deprecations. If not called, deferred entries are silently discarded at request end.
+### `php74_php8_cmps_set_sampling(int $sampling_factor): bool`
+
+Change the sampling factor during the request.
+
+| Parameter          | Type | Description                                      |
+|--------------------|------|--------------------------------------------------|
+| `$sampling_factor` | int  | `0` or `1` = no sampling; `N` > 1 = sample 1/N   |
+
+**Returns:** `true` if the factor was updated, `false` when the current mode forces
+sampling off (`error`, `simulate`, `simulate_and_report`). On success, the internal
+sample counter is reset.
+
+---
+
+### `php74_php8_cmps_flush_deferred(): bool`
+
+Flush the deferred report buffer and emit buffered deprecations via `E_DEPRECATED`.
+
+**Returns:** `true` if any reports were emitted, `false` if the extension is in sync
+mode, the buffer is empty, or it was already flushed.
+
+**Important:** In defer report mode (`report_mode=defer`) the extension does **not**
+flush automatically. Call this explicitly (e.g. at the end of the script or inside
+`register_shutdown_function()`) to emit buffered deprecations. If not called, deferred
+entries are discarded at request end.
+
+---
+
+### `php74_php8_cmps_get_deferred_reports(): array`
+
+Return the buffered deferred reports without flushing. In sync mode, returns an empty array.
+
+**Returns:** List of associative arrays, each with:
+
+| Key           | Type | Description                              |
+|---------------|------|------------------------------------------|
+| `filename`    | string | File where the comparison occurred    |
+| `line`        | int    | Line number                             |
+| `entry_count` | int    | Number of occurrences at that location |
+| `operator`    | string | Operator (`==`, `!=`, `<`, `<=`, `<=>`, `case`) |
+| `left_op`     | string | Left operand as string                 |
+| `right_op`    | string | Right operand as string                |
+
+---
+
+### `php74_php8_cmps_set_ignored_locations(array $locations): void`
+
+Suppress comparison checks at specific file:line locations. Each array element must be
+a string in the form `"path_suffix:line"`, where `path_suffix` is the trailing part of
+the full path (e.g. `"vendor/pkg/Class.php:105"` matches `/var/www/app/vendor/pkg/Class.php` at line 105).
+
+| Parameter   | Type  | Description                                      |
+|-------------|-------|--------------------------------------------------|
+| `$locations`| array | List of `"path_suffix:line"` strings to ignore   |
+
+**Example:**
+
+```php
+php74_php8_cmps_set_ignored_locations([
+    basename(__FILE__) . ':42',
+    'vendor/legacy/Helper.php:105',
+]);
+```
 
 ## Install
 
