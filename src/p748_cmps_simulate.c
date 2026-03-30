@@ -13,11 +13,8 @@ int p748_cmps_simulate_php8_result(
     int cmp;
     zval *result;
 
-    if (!p748_cmps_should_report(op1, op2)) {
-        return 0;
-    }
-
-    /* Why: PHP 8 compares non-numeric string vs number as strings. */
+    /* Why: PHP 8 compares non-numeric string vs number as strings.
+     * Caller (opcode handler) has already verified both type and result-differ conditions. */
     op1_str = zval_get_string(op1);
     op2_str = zval_get_string(op2);
     cmp = zend_binary_strcmp(

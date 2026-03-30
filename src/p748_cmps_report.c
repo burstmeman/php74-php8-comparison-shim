@@ -13,7 +13,7 @@ typedef struct {
     zend_string *op1_str;
     zend_string *op2_str;
     zend_uchar opcode;
-    const char *filename;
+    char *filename;
     zend_long lineno;
     zend_long count;
 } p748_cmps_report_entry;
@@ -35,7 +35,7 @@ static void p748_cmps_report_entry_dtor(zval *zv)
         entry->op2_str = NULL;
     }
     if (entry->filename != NULL) {
-        efree((void *)entry->filename);
+        efree(entry->filename);
         entry->filename = NULL;
     }
 
@@ -238,7 +238,7 @@ void p748_cmps_report_enqueue(zend_uchar opcode, zval *op1, zval *op2)
     entry->op2_str = zval_get_string(op2);
     entry->opcode = opcode;
     entry->filename = (filename_cstr != NULL && filename_len > 0)
-        ? (const char *)estrndup(filename_cstr, filename_len)
+        ? estrndup(filename_cstr, filename_len)
         : NULL;
     entry->lineno = lineno;
     entry->count = 1;
