@@ -108,7 +108,6 @@ static int p748_cmps_opcode_handler(zend_execute_data *execute_data)
     zval *op1;
     zval *op2;
     zend_long mode;
-    int should_report = 0;
     int opcode_result = ZEND_USER_OPCODE_DISPATCH;
     int advance_opline = 0;
 
@@ -141,8 +140,19 @@ static int p748_cmps_opcode_handler(zend_execute_data *execute_data)
         ZVAL_DEREF(op1);
         ZVAL_DEREF(op2);
 
-        if (p748_cmps_is_number_string_pair(op1, op2)
-            && p748_cmps_mode_uses_sampling(mode)) {
+        /* Gate 1: type check — number vs non-numeric string only. */
+        if (!p748_cmps_should_report(op1, op2)) {
+            goto cleanup;
+        }
+
+        /* Gate 2: logic check — only intercept when PHP 8.0 result would differ. */
+        if (!p748_cmps_results_differ(opline->opcode, op1, op2)) {
+            goto cleanup;
+        }
+
+        /* Gate 3: sampling — applied only to comparisons that would actually be intercepted,
+         * giving accurate per-changed-comparison sampling ratios. */
+        if (p748_cmps_mode_uses_sampling(mode)) {
             zend_long factor = PHP74_PHP8_CS_G(sampling_factor);
             if (factor > 1) {
                 PHP74_PHP8_CS_G(sample_counter)++;
@@ -152,9 +162,7 @@ static int p748_cmps_opcode_handler(zend_execute_data *execute_data)
             }
         }
 
-        should_report = p748_cmps_should_report(op1, op2);
-
-        if (should_report) {
+        {
             const char *op = p748_cmps_opcode_to_operator(opline->opcode);
 
             if (mode == P748_CMPS_MODE_ERROR) {
@@ -205,7 +213,7 @@ static int p748_cmps_opcode_handler(zend_execute_data *execute_data)
             }
         }
 
-        if (should_report && p748_cmps_mode_simulates(mode)) {
+        if (p748_cmps_mode_simulates(mode)) {
             if (p748_cmps_simulate_php8_result(execute_data, opline, op1, op2)) {
                 opcode_result = ZEND_USER_OPCODE_CONTINUE;
                 advance_opline = 1;
