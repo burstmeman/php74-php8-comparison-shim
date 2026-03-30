@@ -2,219 +2,169 @@
 
 #include <string.h>
 
+/* --- Internal helpers: parse raw C string values --- */
+
+static zend_long p748_cmps_parse_mode_cstr(const char *val, size_t len)
+{
+    if (val == NULL || len == 0) {
+        return P748_CMPS_MODE_OFF;
+    }
+
+    if ((len == 3 && strncasecmp(val, "off", 3) == 0)
+        || (len == 1 && val[0] == '0')) {
+        return P748_CMPS_MODE_OFF;
+    }
+
+    if ((len == 6 && strncasecmp(val, "report", 6) == 0)
+        || (len == 1 && val[0] == '1')) {
+        return P748_CMPS_MODE_REPORT;
+    }
+
+    if ((len == 5 && strncasecmp(val, "error", 5) == 0)
+        || (len == 1 && val[0] == '2')) {
+#if PHP74_PHP8_COMPARISON_SHIM_RISKY
+        return P748_CMPS_MODE_ERROR;
+#else
+        return P748_CMPS_MODE_OFF;
+#endif
+    }
+
+    if ((len == 19 && strncasecmp(val, "simulate_and_report", 19) == 0)
+        || (len == 1 && val[0] == '3')) {
+#if PHP74_PHP8_COMPARISON_SHIM_RISKY
+        return P748_CMPS_MODE_SIMULATE_AND_REPORT;
+#else
+        return P748_CMPS_MODE_OFF;
+#endif
+    }
+
+    if ((len == 8 && strncasecmp(val, "simulate", 8) == 0)
+        || (len == 1 && val[0] == '4')) {
+#if PHP74_PHP8_COMPARISON_SHIM_RISKY
+        return P748_CMPS_MODE_SIMULATE;
+#else
+        return P748_CMPS_MODE_OFF;
+#endif
+    }
+
+    return P748_CMPS_MODE_OFF;
+}
+
+static zend_long p748_cmps_parse_report_mode_cstr(const char *val, size_t len)
+{
+    if (val == NULL || len == 0) {
+        return P748_CMPS_REPORT_MODE_SYNC;
+    }
+
+    if ((len == 4 && strncasecmp(val, "sync", 4) == 0)
+        || (len == 1 && val[0] == '0')) {
+        return P748_CMPS_REPORT_MODE_SYNC;
+    }
+
+    if ((len == 5 && strncasecmp(val, "defer", 5) == 0)
+        || (len == 1 && val[0] == '1')) {
+        return P748_CMPS_REPORT_MODE_DEFER;
+    }
+
+    return P748_CMPS_REPORT_MODE_SYNC;
+}
+
+static zend_long p748_cmps_parse_sampling_cstr(const char *val, size_t len)
+{
+    zend_long factor = 0;
+
+    if (val != NULL && len > 0) {
+        factor = zend_atol(val, len);
+    }
+
+    return factor < 0 ? 0 : factor;
+}
+
+/* --- Public API: zend_string variants --- */
+
 void p748_cmps_set_mode_from_string(const zend_string *value)
 {
-    if (value == NULL || ZSTR_LEN(value) == 0) {
-        PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_OFF;
-        return;
-    }
+    zend_long mode = p748_cmps_parse_mode_cstr(
+        value ? ZSTR_VAL(value) : NULL,
+        value ? ZSTR_LEN(value) : 0);
 
-    if (zend_string_equals_literal_ci(value, "off")
-        || zend_string_equals_literal_ci(value, "0")) {
-        PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_OFF;
-        return;
-    }
+    PHP74_PHP8_CS_G(mode) = mode;
 
-    if (zend_string_equals_literal_ci(value, "report")
-        || zend_string_equals_literal_ci(value, "1")) {
-        PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_REPORT;
-        return;
-    }
-
-    if (zend_string_equals_literal_ci(value, "error")
-        || zend_string_equals_literal_ci(value, "2")) {
-#if PHP74_PHP8_COMPARISON_SHIM_RISKY
-        PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_ERROR;
+    if (p748_cmps_mode_forces_sampling_off(mode)) {
         p748_cmps_disable_sampling();
-#else
-        PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_OFF;
-#endif
-        return;
     }
-
-    if (zend_string_equals_literal_ci(value, "simulate_and_report")
-        || zend_string_equals_literal_ci(value, "3")) {
-#if PHP74_PHP8_COMPARISON_SHIM_RISKY
-        PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_SIMULATE_AND_REPORT;
-        p748_cmps_disable_sampling();
-#else
-        PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_OFF;
-#endif
-        return;
-    }
-
-    if (zend_string_equals_literal_ci(value, "simulate")
-        || zend_string_equals_literal_ci(value, "4")) {
-#if PHP74_PHP8_COMPARISON_SHIM_RISKY
-        PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_SIMULATE;
-        p748_cmps_disable_sampling();
-#else
-        PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_OFF;
-#endif
-        return;
-    }
-
-    PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_OFF;
 }
 
 void p748_cmps_set_sampling_from_string(const zend_string *value)
 {
-    zend_long factor = 0;
-
     if (p748_cmps_mode_forces_sampling_off(PHP74_PHP8_CS_G(mode))) {
         p748_cmps_disable_sampling();
         return;
     }
 
-    if (value != NULL && ZSTR_LEN(value) > 0) {
-        factor = zend_atol(ZSTR_VAL(value), ZSTR_LEN(value));
-    }
-
-    if (factor < 0) {
-        factor = 0;
-    }
-
-    PHP74_PHP8_CS_G(sampling_factor) = factor;
+    PHP74_PHP8_CS_G(sampling_factor) = p748_cmps_parse_sampling_cstr(
+        value ? ZSTR_VAL(value) : NULL,
+        value ? ZSTR_LEN(value) : 0);
     PHP74_PHP8_CS_G(sample_counter) = 0;
 }
 
 void p748_cmps_set_report_mode_from_string(const zend_string *value)
 {
-    if (value == NULL || ZSTR_LEN(value) == 0) {
-        PHP74_PHP8_CS_G(report_mode) = P748_CMPS_REPORT_MODE_SYNC;
-        return;
-    }
-
-    if (zend_string_equals_literal_ci(value, "sync")
-        || zend_string_equals_literal_ci(value, "0")) {
-        PHP74_PHP8_CS_G(report_mode) = P748_CMPS_REPORT_MODE_SYNC;
-        return;
-    }
-
-    if (zend_string_equals_literal_ci(value, "defer")
-        || zend_string_equals_literal_ci(value, "1")) {
-        PHP74_PHP8_CS_G(report_mode) = P748_CMPS_REPORT_MODE_DEFER;
-        return;
-    }
-
-    PHP74_PHP8_CS_G(report_mode) = P748_CMPS_REPORT_MODE_SYNC;
+    PHP74_PHP8_CS_G(report_mode) = p748_cmps_parse_report_mode_cstr(
+        value ? ZSTR_VAL(value) : NULL,
+        value ? ZSTR_LEN(value) : 0);
 }
+
+/* --- Public API: C string variants --- */
 
 void p748_cmps_set_mode_from_cstr(const char *value)
 {
-    if (value == NULL || value[0] == '\0') {
-        PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_OFF;
-        return;
-    }
+    zend_long mode = p748_cmps_parse_mode_cstr(value, value ? strlen(value) : 0);
 
-    if (strcasecmp(value, "off") == 0 || strcmp(value, "0") == 0) {
-        PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_OFF;
-        return;
-    }
+    PHP74_PHP8_CS_G(mode) = mode;
 
-    if (strcasecmp(value, "report") == 0 || strcmp(value, "1") == 0) {
-        PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_REPORT;
-        return;
-    }
-
-    if (strcasecmp(value, "error") == 0 || strcmp(value, "2") == 0) {
-#if PHP74_PHP8_COMPARISON_SHIM_RISKY
-        PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_ERROR;
+    if (p748_cmps_mode_forces_sampling_off(mode)) {
         p748_cmps_disable_sampling();
-#else
-        PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_OFF;
-#endif
-        return;
     }
-
-    if (strcasecmp(value, "simulate_and_report") == 0 || strcmp(value, "3") == 0) {
-#if PHP74_PHP8_COMPARISON_SHIM_RISKY
-        PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_SIMULATE_AND_REPORT;
-        p748_cmps_disable_sampling();
-#else
-        PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_OFF;
-#endif
-        return;
-    }
-
-    if (strcasecmp(value, "simulate") == 0 || strcmp(value, "4") == 0) {
-#if PHP74_PHP8_COMPARISON_SHIM_RISKY
-        PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_SIMULATE;
-        p748_cmps_disable_sampling();
-#else
-        PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_OFF;
-#endif
-        return;
-    }
-
-    PHP74_PHP8_CS_G(mode) = P748_CMPS_MODE_OFF;
 }
 
 void p748_cmps_set_sampling_from_cstr(const char *value)
 {
-    zend_long factor = 0;
-
     if (p748_cmps_mode_forces_sampling_off(PHP74_PHP8_CS_G(mode))) {
         p748_cmps_disable_sampling();
         return;
     }
 
-    if (value != NULL && value[0] != '\0') {
-        factor = zend_atol(value, strlen(value));
-    }
-
-    if (factor < 0) {
-        factor = 0;
-    }
-
-    PHP74_PHP8_CS_G(sampling_factor) = factor;
+    PHP74_PHP8_CS_G(sampling_factor) = p748_cmps_parse_sampling_cstr(
+        value, value ? strlen(value) : 0);
     PHP74_PHP8_CS_G(sample_counter) = 0;
 }
 
 void p748_cmps_set_report_mode_from_cstr(const char *value)
 {
-    if (value == NULL || value[0] == '\0') {
-        PHP74_PHP8_CS_G(report_mode) = P748_CMPS_REPORT_MODE_SYNC;
-        return;
-    }
-
-    if (strcasecmp(value, "sync") == 0 || strcmp(value, "0") == 0) {
-        PHP74_PHP8_CS_G(report_mode) = P748_CMPS_REPORT_MODE_SYNC;
-        return;
-    }
-
-    if (strcasecmp(value, "defer") == 0 || strcmp(value, "1") == 0) {
-        PHP74_PHP8_CS_G(report_mode) = P748_CMPS_REPORT_MODE_DEFER;
-        return;
-    }
-
-    PHP74_PHP8_CS_G(report_mode) = P748_CMPS_REPORT_MODE_SYNC;
+    PHP74_PHP8_CS_G(report_mode) = p748_cmps_parse_report_mode_cstr(
+        value, value ? strlen(value) : 0);
 }
+
+/* --- Display helpers --- */
 
 const char *p748_cmps_mode_to_string(zend_long mode)
 {
     switch (mode) {
-        case P748_CMPS_MODE_REPORT:
-            return "report";
-        case P748_CMPS_MODE_ERROR:
-            return "error";
-        case P748_CMPS_MODE_SIMULATE_AND_REPORT:
-            return "simulate_and_report";
-        case P748_CMPS_MODE_SIMULATE:
-            return "simulate";
+        case P748_CMPS_MODE_REPORT:             return "report";
+        case P748_CMPS_MODE_ERROR:              return "error";
+        case P748_CMPS_MODE_SIMULATE_AND_REPORT: return "simulate_and_report";
+        case P748_CMPS_MODE_SIMULATE:           return "simulate";
         case P748_CMPS_MODE_OFF:
-        default:
-            return "off";
+        default:                                return "off";
     }
 }
 
 const char *p748_cmps_report_mode_to_string(zend_long mode)
 {
     switch (mode) {
-        case P748_CMPS_REPORT_MODE_DEFER:
-            return "defer";
+        case P748_CMPS_REPORT_MODE_DEFER: return "defer";
         case P748_CMPS_REPORT_MODE_SYNC:
-        default:
-            return "sync";
+        default:                          return "sync";
     }
 }
