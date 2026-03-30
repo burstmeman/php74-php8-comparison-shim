@@ -4,25 +4,49 @@ Detects PHP 8.0 string-to-number comparison behavior changes while running on PH
 
 ## What it does
 
-PHP 8 changed non-strict comparisons between numbers and non-numeric strings. This extension
-detects those comparisons at runtime on PHP 7.4 and can either report them or throw an error.
+PHP 8.0 changed how loose comparisons between numbers and non-numeric strings work.
+In PHP 7.4, the string was cast to a number for comparison. In PHP 8.0, the number is
+cast to a string and the two strings are compared lexicographically.
+
+This extension hooks into the PHP 7.4 VM at runtime, intercepts comparison opcodes, and
+**only acts when the result would actually differ between PHP 7.4 and PHP 8.0**. Comparisons
+where both versions agree are passed through without any overhead beyond the opcode handler
+dispatch check.
+
+Depending on the configured mode, the extension can:
+- emit a deprecation warning (`report`)
+- throw an `Error` exception (`error`)
+- silently substitute the PHP 8.0 result (`simulate`)
+- do both of the above (`simulate_and_report`)
 
 Relevant PHP documentation:
 
 - [PHP 8.0 Migration Guide](https://www.php.net/manual/en/migration80.php)
 - [Loose comparisons](https://www.php.net/manual/en/types.comparisons.php)
-- [Error handling](https://www.php.net/manual/en/language.errors.php7.php)
 
-Behavior change examples:
+### Behavior change examples
 
-| Comparison      | PHP 7.4 | PHP 8.0 |
-|-----------------|---------|---------|
-| `0 == "0"`      | true    | true    |
-| `0 == "0.0"`    | true    | true    |
-| `0 == "foo"`    | true    | false   |
-| `0 == ""`       | true    | false   |
-| `42 == " 42"`   | true    | true    |
-| `42 == "42foo"` | true    | false   |
+The table below shows cases where PHP 7.4 and PHP 8.0 **disagree** — these are the only
+comparisons the extension intercepts.
+
+| Comparison      | PHP 7.4 | PHP 8.0 | Reason                                    |
+|-----------------|---------|---------|-------------------------------------------|
+| `0 == "foo"`    | true    | false   | `"foo"` → 0 in 7.4; `"0" != "foo"` in 8.0 |
+| `0 == ""`       | true    | false   | `""` → 0 in 7.4; `"0" != ""` in 8.0      |
+| `42 == "42foo"` | true    | false   | `"42foo"` → 42 in 7.4; `"42" != "42foo"` in 8.0 |
+| `0 < "foo"`     | false   | true    | `0 < 0` in 7.4; `"0" < "foo"` in 8.0     |
+| `1 > "foo"`     | true    | false   | `1 > 0` in 7.4; `"1" < "foo"` in 8.0     |
+| `0 <=> "foo"`   | 0       | -1      | 7.4: equal (0==0); 8.0: "0" < "foo"      |
+
+Cases where both versions agree are **not intercepted**, even if the operands are a number
+and a non-numeric string:
+
+| Comparison      | PHP 7.4 | PHP 8.0 | Why skipped                                   |
+|-----------------|---------|---------|-----------------------------------------------|
+| `1 == "foo"`    | false   | false   | 7.4: `1 != 0`; 8.0: `"1" != "foo"` — same    |
+| `0 <= "foo"`    | true    | true    | 7.4: `0 <= 0`; 8.0: `"0" <= "foo"` — same    |
+| `0 > "foo"`     | false   | false   | 7.4: `0 > 0`; 8.0: `"0" > "foo"` — same      |
+| `0 == "0"`      | true    | true    | numeric string, no change in either version   |
 
 ## Configuration
 
@@ -40,10 +64,10 @@ php74_php8_comparison_shim.sampling_factor=0
 Allowed values (set at startup only):
 
 - `off`    - extension logic disabled
-- `report` - emit deprecation warnings
-- `error`  - throw an Error
-- `simulate_and_report` - emit deprecation warnings and return PHP 8.0 results
-- `simulate` - return PHP 8.0 results without reporting
+- `report` - emit deprecation warnings for comparisons whose result changes in PHP 8.0
+- `error`  - throw an Error for comparisons whose result changes in PHP 8.0
+- `simulate_and_report` - emit deprecation warnings and substitute the PHP 8.0 result
+- `simulate` - substitute the PHP 8.0 result without reporting
 
 Note: `error`, `simulate`, and `simulate_and_report` are only available when the extension
 is built with `--enable-php74-php8-comparison-shim-risky`. Without that flag, those modes
@@ -55,7 +79,7 @@ via `ini_set()`.
 Sampling factor:
 
 - `0` or `1` - check every comparison (no sampling)
-- `N` (> 1) - check once per `N` number/string comparisons
+- `N` (> 1) - check once per `N` intercepted comparisons (those where result would change)
 
 Sampling is forced to `0` in `error`, `simulate_and_report`, and `simulate` modes.
 
@@ -273,6 +297,12 @@ Run a single PHPT:
 docker run --rm php74-php8-comparison-shim-test bash -lc "TESTS=tests/002-report.phpt make test"
 ```
 
+Run the benchmark inside the container:
+
+```
+docker run --rm php74-php8-comparison-shim-test bench/run.sh
+```
+
 ## Benchmark (overhead)
 
 Build the extension first, then run:
@@ -282,20 +312,30 @@ chmod +x bench/run.sh
 PHP_BIN=/opt/php/7.4.33/bin/php SNC_ITERATIONS=1000000 SNC_RUNS=5 bench/run.sh
 ```
 
-Benchmark results (PHP 7.4.33, 1,000,000 iterations, 5 runs):
+Benchmark results (PHP 7.4.33, 1,000,000 iterations, 5 runs, aarch64 Linux):
 
-% diff is computed from avg_total_elapsed_ms against the baseline (no extension).
+`% diff` is computed from `avg_total_elapsed_ms` against the no-extension baseline.
 
-| Case                               | Avg total (ms) | Avg comparisons (ms) | % diff vs baseline |
-|------------------------------------|----------------|----------------------|--------------------|
-| No extension (disabled)            | 155            | 148                  | 0.0%               |
-| Extension loaded: Off              | 158            | 152                  | +1.9%              |
-| Extension loaded: Report           | 770            | 764                  | +396.8%            |
-| Extension loaded: Report (sampling=5) | 307         | 300                  | +98.1%             |
-| Extension loaded: Simulate         | 213            | 207                  | +37.4%             |
-| Extension loaded: Simulate + Report | 682           | 676                  | +340.0%            |
-| Extension loaded: Error            | 819            | 814                  | +428.4%            |
-| Extension loaded: Report (defer)   | 326            | 320                  | +110.3%            |
+| Case                                  | Avg total (ms) | Avg comparisons (ms) | % diff vs baseline |
+|---------------------------------------|----------------|----------------------|--------------------|
+| No extension (disabled)               | 155            | 148                  | 0.0%               |
+| Extension loaded: Off                 | 156            | 148                  | +0.6%              |
+| Extension loaded: Report              | 855            | 848                  | +451.6%            |
+| Extension loaded: Report (sampling=5) | 371            | 365                  | +139.4%            |
+| Extension loaded: Simulate            | 283            | 277                  | +82.6%             |
+| Extension loaded: Simulate + Report   | 768            | 762                  | +395.5%            |
+| Extension loaded: Error               | 896            | 889                  | +477.9%            |
+| Extension loaded: Report (defer)      | 421            | 415                  | +171.6%            |
+| Opcodes iteration overhead            | 210            | 204                  | +35.5%             |
+| Deprecation log cost                  | 1043           | 1037                 | +573.0%            |
+
+**Notes:**
+- *Off*: handlers not installed — overhead is pure module load cost (~0.6%).
+- *Report*: overhead comes from `zend_error(E_DEPRECATED)` on every changed comparison.
+- *Simulate*: cheaper than report because string result substitution avoids the error path.
+- *Opcodes iteration overhead*: measures the cost of the opcode handler dispatch itself (numeric strings only, no interception).
+- *Deprecation log cost*: isolated cost of `zend_error()` with `display_errors=0` and `log_errors=0`.
+- *Defer*: buffers reports in a HashTable; flush cost is paid at shutdown, not during the request.
 
 ## Debugging with gdb
 
