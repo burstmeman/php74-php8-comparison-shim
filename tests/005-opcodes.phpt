@@ -1,5 +1,5 @@
 --TEST--
-Report mode covers ==, !=, <, <= operators
+Report mode covers ==, !=, < operators; does not warn when result is same in PHP 7.4 and PHP 8.0
 --INI--
 php74_php8_comparison_shim.mode=report
 display_errors=1
@@ -13,6 +13,7 @@ $s = "foo";
 var_dump($n == $s);
 var_dump($n != $s);
 var_dump($n < $s);
+// 0 <= "foo": PHP 7.4 (0 <= 0) = true AND PHP 8.0 ("0" <= "foo") = true — same result, no warning
 var_dump($n <= $s);
 ?>
 --EXPECTF--
@@ -25,6 +26,4 @@ bool(false)
 
 %rDeprecated: php74_php8_comparison_shim: Non-strict comparison between "0" and "foo" using < in .+ on line \d+%r
 bool(false)
-
-%rDeprecated: php74_php8_comparison_shim: Non-strict comparison between "0" and "foo" using <= in .+ on line \d+%r
 bool(true)
