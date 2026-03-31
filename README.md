@@ -316,26 +316,26 @@ Benchmark results (PHP 7.4.33, 1,000,000 iterations, 5 runs, aarch64 Linux):
 
 `% diff` is computed from `avg_total_elapsed_ms` against the no-extension baseline.
 
-| Case                                  | Avg total (ms) | Avg comparisons (ms) | % diff vs baseline |
-|---------------------------------------|----------------|----------------------|--------------------|
-| No extension (disabled)               | 155            | 148                  | 0.0%               |
-| Extension loaded: Off                 | 156            | 148                  | +0.6%              |
-| Extension loaded: Report              | 855            | 848                  | +451.6%            |
-| Extension loaded: Report (sampling=5) | 371            | 365                  | +139.4%            |
-| Extension loaded: Simulate            | 283            | 277                  | +82.6%             |
-| Extension loaded: Simulate + Report   | 768            | 762                  | +395.5%            |
-| Extension loaded: Error               | 896            | 889                  | +477.9%            |
-| Extension loaded: Report (defer)      | 421            | 415                  | +171.6%            |
-| Opcodes iteration overhead            | 210            | 204                  | +35.5%             |
-| Deprecation log cost                  | 1043           | 1037                 | +573.0%            |
+| Case                                       | Avg total (ms) | Avg comparisons (ms) | Avg flush (μs) | % diff vs baseline |
+|--------------------------------------------|----------------|----------------------|----------------|--------------------|
+| No extension (disabled)                    | 155            | 148                  | —              | 0.0%               |
+| Extension loaded: Off                      | 157            | 150                  | —              | +1.3%              |
+| Extension loaded: Report                   | 853            | 846                  | —              | +450.3%            |
+| Extension loaded: Report (sampling=5)      | 418            | 411                  | —              | +169.7%            |
+| Extension loaded: Simulate                 | 328            | 321                  | —              | +111.6%            |
+| Extension loaded: Simulate + Report        | 764            | 758                  | —              | +393.5%            |
+| Extension loaded: Error                    | 899            | 893                  | —              | +480.0%            |
+| Opcodes iteration overhead                 | 215            | 208                  | —              | +38.7%             |
+| Report cost: all intercepted (sync)        | 1030           | 1024                 | —              | +564.5%            |
+| Extension loaded: Report (defer)           | 415            | 409                  | 7              | +167.7%            |
 
 **Notes:**
-- *Off*: handlers not installed — overhead is pure module load cost (~0.6%).
+- *Off*: handlers not installed — overhead is pure module load cost (~1%).
 - *Report*: overhead comes from `zend_error(E_DEPRECATED)` on every changed comparison.
 - *Simulate*: cheaper than report because string result substitution avoids the error path.
-- *Opcodes iteration overhead*: measures the cost of the opcode handler dispatch itself (numeric strings only, no interception).
-- *Deprecation log cost*: isolated cost of `zend_error()` with `display_errors=0` and `log_errors=0`.
-- *Defer*: buffers reports in a HashTable; flush cost is paid at shutdown, not during the request.
+- *Opcodes iteration overhead*: measures bare opcode-handler dispatch (numeric strings only, no interception).
+- *Report cost: all intercepted (sync)*: isolated cost of intercepting every comparison and calling `zend_error()` inline.
+- *Defer*: the comparison loop only buffers entries — no `zend_error()` in the hot path. `bench.php` calls `php74_php8_cmps_flush_deferred()` explicitly after the loop so comparison and reporting costs are measured separately. Avg flush shows the time to emit buffered `E_DEPRECATED` calls at request shutdown (~7 μs for this synthetic test with a single unique `file:line` entry).
 
 **Production note:** The synthetic benchmark above stresses a tight loop of changed comparisons
 and reflects worst-case overhead. In practice, at ~300k RPM the observed latency increase was
