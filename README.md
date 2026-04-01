@@ -48,6 +48,51 @@ and a non-numeric string:
 | `0 > "foo"`     | false   | false   | 7.4: `0 > 0`; 8.0: `"0" > "foo"` — same      |
 | `0 == "0"`      | true    | true    | numeric string, no change in either version   |
 
+## Known limitations
+
+### OPcache constant folding
+
+When OPcache is enabled (typical in php-fpm) with its default optimization level, comparisons
+where **both operands are compile-time constants** are folded by OPcache's Sparse Conditional
+Constant Propagation (SCCP) pass before the script ever executes. The `ZEND_IS_EQUAL` (and
+related) opcodes are replaced with a pre-computed constant result — no opcode is dispatched at
+runtime, so the extension's handler is never called.
+
+Example: OPcache sees `$a = 0` (literal assignment) and `"foo"` (literal string), evaluates
+`$a == "foo"` at compile time using PHP 7.4 semantics (result: `true`), and replaces the
+comparison with a direct `QM_ASSIGN true`. The extension never sees it.
+
+**How to recognize this:** the same comparison gets reported after adding `eval('0;')` or
+replacing the literal with a closure (`$a = fn() => 0; $a() == "foo"`). Both prevent OPcache
+from resolving `$a` statically — the opcode survives optimization and the handler fires.
+
+**Impact in practice:** most production comparisons involve at least one operand from a
+runtime source (database row, HTTP input, config file). OPcache cannot constant-fold those,
+so the extension intercepts them as expected. The limitation affects only comparisons where
+both sides are PHP literals visible in the same function body.
+
+**Workarounds:**
+
+Disable all OPcache optimization (suitable for test environments or investigation):
+
+```ini
+opcache.optimization_level=0
+```
+
+Disable only the constant folding and SCCP passes, keeping other optimizations intact.
+In PHP 7.4, SCCP is pass 14 (`1<<13 = 0x2000`) and constant-expression evaluation is
+pass 3 (`1<<2 = 0x4`). Subtract them from the default `0x7FFEBFFF`:
+
+```ini
+; default 0x7FFEBFFF minus 0x2004 (pass 3 + pass 14)
+opcache.optimization_level=0x7FFEBFFB
+```
+
+Verify by checking whether the affected comparisons now produce reports.
+
+**Test suite note:** PHP's CLI runner uses `opcache.enable_cli=0` by default, so the
+PHPT tests run without OPcache and are not affected by this limitation.
+
 ## Configuration
 
 INI settings control startup behavior. For runtime control (sampling, deferred reports,
